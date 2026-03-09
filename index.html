@@ -25,7 +25,7 @@
     }
     var s = document.createElement('script');
     s.src = sources[idx];
-    s.onload = function() { window._pdfjsLoadedFrom = idx; };
+    s.onload = function() { window._pdfjsLoadedFrom = idx; if (typeof initPdfWorker === 'function') initPdfWorker(); };
     s.onerror = function() { console.warn('pdf.js blocked from: ' + sources[idx]); tryLoad(idx + 1); };
     document.head.appendChild(s);
   }
@@ -494,6 +494,21 @@ function parseDateFromLine(text, year) {
 // ═══════════════════════════════════════════════════════
 async function handleFile(file) {
  if (!file) return;
+
+ // Ensure pdf.js is loaded (async fallback may still be loading)
+ if (typeof pdfjsLib === 'undefined') {
+   // Wait up to 5 seconds for async load
+   for (let w = 0; w < 50 && typeof pdfjsLib === 'undefined'; w++) {
+     await new Promise(r => setTimeout(r, 100));
+   }
+   if (typeof pdfjsLib === 'undefined') {
+     document.getElementById('parseStatus').textContent = 'Error: PDF library failed to load (blocked by browser). Try pasting text instead.';
+     document.getElementById('parseProgress').classList.remove('hidden');
+     return;
+   }
+   initPdfWorker();
+ }
+
  state.fileName = file.name;
  document.getElementById('fileInfo').textContent = file.name;
  document.getElementById('parseProgress').classList.remove('hidden');
@@ -1335,17 +1350,23 @@ dropZone.addEventListener('drop', (e) => {
  e.preventDefault();
  dropZone.classList.remove('dragover');
  const file = e.dataTransfer.files[0];
- if (file && file.type === 'application/pdf') {
+ if (file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'))) {
    handleFile(file);
  }
 });
 
-// Initialize pdf.js worker
-if (typeof pdfjsLib !== 'undefined') {
- // Use the same CDN that successfully loaded pdf.js for the worker
- var workerIdx = window._pdfjsLoadedFrom || 0;
- pdfjsLib.GlobalWorkerOptions.workerSrc = (window._pdfWorkerSources || [])[workerIdx] || 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+// Initialize pdf.js worker (may already be loaded, or may load async via fallback chain)
+function initPdfWorker() {
+ if (typeof pdfjsLib !== 'undefined') {
+   var workerIdx = window._pdfjsLoadedFrom || 0;
+   pdfjsLib.GlobalWorkerOptions.workerSrc = (window._pdfWorkerSources || [])[workerIdx] || 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+   window._pdfjsReady = true;
+   return true;
+ }
+ return false;
 }
+// Try now (in case it loaded synchronously)
+initPdfWorker();
 </script>
 </body>
 </html>
