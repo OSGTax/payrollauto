@@ -626,7 +626,10 @@ function parseTimeEntries(rawText) {
    const singleTime = line.match(/^(\d{1,2}:\d{2}\s*[AP]M)$/i);
 
    if ((groupedTime || singleTime) && currentEmpId && currentDate) {
+     let inlineRemainder = '';
      if (groupedTime) {
+       // pdf.js may put "Project: ... Entry HH:MM" on the same line as times
+       inlineRemainder = line.substring(groupedTime[0].length).trim();
        i++; // move past the grouped time line
      } else {
        // Line-by-line: start time, then stop time, then break duration
@@ -640,6 +643,15 @@ function parseTimeEntries(rawText) {
      let equipment = null, description = null, entryHours = null;
      let collectingCostCode = false;
      let lastLabel = null; // tracks a label whose value is on the next line
+
+     // Parse inline data from PDF grouped time lines
+     // e.g. "6:30 AM 3:25 PM 00:00 Project: Shop Entry 08:55"
+     if (inlineRemainder) {
+       const entryM = inlineRemainder.match(/Entry\s+(\d+:\d+)/i);
+       if (entryM) entryHours = hhmmToDecimal(entryM[1]);
+       const projM = inlineRemainder.match(/Project:\s*(.*?)(?:\s+Entry\s+\d+:\d+)/i);
+       if (projM) project = projM[1].trim();
+     }
 
      while (i < allLines.length) {
        const cl = allLines[i];
