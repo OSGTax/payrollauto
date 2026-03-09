@@ -573,6 +573,7 @@ function parseTimeEntries(rawText) {
      }
      if (id) {
        currentEmpId = id;
+       console.log('FOUND EMP ID:', id);
        // Look backward for employee name
        currentEmployee = 'Unknown';
        for (let b = i - 1; b >= Math.max(0, i - 5); b--) {
@@ -610,6 +611,7 @@ function parseTimeEntries(rawText) {
      const mon = months[dateMatch[2].charAt(0).toUpperCase() + dateMatch[2].slice(1).toLowerCase()];
      if (mon !== undefined) {
        currentDate = new Date(currentYear, mon, parseInt(dateMatch[3]));
+       console.log('FOUND DATE:', currentDate, 'empId:', currentEmpId);
      }
      i++;
      // Skip daily total on next line (bare "HH:MM" without AM/PM)
@@ -625,6 +627,7 @@ function parseTimeEntries(rawText) {
    const groupedTime = line.match(/^(\d{1,2}:\d{2}\s*[AP]M)\s+(\d{1,2}:\d{2}\s*[AP]M)\s+(\d{2}:\d{2})/i);
    const singleTime = line.match(/^(\d{1,2}:\d{2}\s*[AP]M)$/i);
 
+   console.log('LINE[' + i + ']:', JSON.stringify(line.substring(0, 80)), 'groupedTime:', !!groupedTime, 'singleTime:', !!singleTime, 'empId:', currentEmpId, 'date:', !!currentDate);
    if ((groupedTime || singleTime) && currentEmpId && currentDate) {
      let inlineRemainder = '';
      if (groupedTime) {
@@ -647,10 +650,12 @@ function parseTimeEntries(rawText) {
      // Parse inline data from PDF grouped time lines
      // e.g. "6:30 AM 3:25 PM 00:00 Project: Shop Entry 08:55"
      if (inlineRemainder) {
+       console.log('INLINE REMAINDER:', JSON.stringify(inlineRemainder));
        const entryM = inlineRemainder.match(/Entry\s+(\d+:\d+)/i);
        if (entryM) entryHours = hhmmToDecimal(entryM[1]);
        const projM = inlineRemainder.match(/Project:\s*(.*?)(?:\s+Entry\s+\d+:\d+)/i);
        if (projM) project = projM[1].trim();
+       console.log('INLINE PARSED: project=', project, 'entryHours=', entryHours);
      }
 
      while (i < allLines.length) {
@@ -744,6 +749,7 @@ function parseTimeEntries(rawText) {
      }
 
      // ── Build entry ──
+     console.log('BUILD ENTRY: hours=', entryHours, 'project=', project, 'projectNum=', projectNum, 'costCode=', costCode);
      if (entryHours > 0) {
        const isShop = !costCode && (
          project === 'Shop' ||
