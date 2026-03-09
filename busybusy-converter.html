@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BusyBusy → ComputerEase Payroll Converter</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@400;500;600;700&display=swap');
+  
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242836;
+    --border: #2e3345;
+    --text: #e4e6ef;
+    --text2: #8b8fa3;
+    --accent: #3b82f6;
+    --accent2: #60a5fa;
+    --green: #22c55e;
+    --green-bg: rgba(34,197,94,0.1);
+    --orange: #f59e0b;
+    --orange-bg: rgba(245,158,11,0.1);
+    --red: #ef4444;
+    --red-bg: rgba(239,68,68,0.1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .header h1 span { color: var(--accent2); }
+
+  .header .subtitle {
+    font-size: 12px;
+    color: var(--text2);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--surface);
+    padding: 0 32px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab {
+    padding: 12px 24px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    user-select: none;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+  .tab.disabled { opacity: 0.3; pointer-events: none; }
+
+  .tab .badge {
+    display: inline-block;
+    background: var(--accent);
+    color: white;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    margin-left: 6px;
+  }
+
+  .content { padding: 32px; max-width: 1400px; margin: 0 auto; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .card h2 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .card .desc {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 16px;
+  }
+
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 60px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(59,130,246,0.05);
+  }
+
+  .drop-zone .icon { font-size: 48px; margin-bottom: 12px; }
+  .drop-zone .label { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .drop-zone .hint { font-size: 12px; color: var(--text2); }
+
+  input[type="file"] { display: none; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-green { background: var(--green); color: white; }
+  .btn-green:hover { background: #16a34a; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text2);
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .tag-job { background: var(--green-bg); color: var(--green); }
+  .tag-shop { background: var(--orange-bg); color: var(--orange); }
+  .tag-ot { background: var(--red-bg); color: var(--red); }
+  .tag-reg { background: rgba(59,130,246,0.1); color: var(--accent2); }
+
+  .stat-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 20px;
+    min-width: 140px;
+  }
+
+  .stat .label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat .value { font-size: 22px; font-weight: 700; font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+
+  .mapping-row {
+    display: grid;
+    grid-template-columns: 200px 1fr 100px 80px 80px 120px;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mapping-row.header {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text2);
+    letter-spacing: 0.5px;
+  }
+
+  input[type="text"], input[type="number"], select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    width: 100%;
+  }
+
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+
+  .progress-bar {
+    width: 100%;
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 12px 0;
+  }
+
+  .progress-bar .fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  .alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+
+  .alert-info { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); color: var(--accent2); }
+  .alert-warn { background: var(--orange-bg); border: 1px solid rgba(245,158,11,0.2); color: var(--orange); }
+  .alert-success { background: var(--green-bg); border: 1px solid rgba(34,197,94,0.2); color: var(--green); }
+
+  .actions { display: flex; gap: 12px; margin-top: 20px; }
+
+  .ot-config {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .ot-config label { font-size: 13px; font-weight: 600; }
+  .ot-config input[type="number"] { width: 80px; }
+
+  .hidden { display: none; }
+
+  .emp-section { margin-bottom: 8px; }
+  .emp-header {
+    padding: 6px 12px;
+    background: var(--surface2);
+    font-weight: 600;
+    font-size: 13px;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .scroll-table {
+    max-height: 500px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .scroll-table thead th { position: sticky; top: 0; z-index: 1; }
+
+  @media (max-width: 900px) {
+    .content { padding: 16px; }
+    .mapping-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>BusyBusy <span>→</span> ComputerEase</h1>
+    <div class="subtitle">Payroll Import Converter &bull; AJK Site Development</div>
+  </div>
+  <div class="subtitle" id="fileInfo"></div>
+</div>
+
+<div class="tabs" id="tabBar">
+  <div class="tab active" data-tab="upload" onclick="switchTab('upload')">1. Upload</div>
+  <div class="tab disabled" data-tab="review" onclick="switchTab('review')">2. Review <span class="badge" id="entryCount" style="display:none">0</span></div>
+  <div class="tab disabled" data-tab="mappings" onclick="switchTab('mappings')">3. Shop Mappings <span class="badge" id="shopCount" style="display:none">0</span></div>
+  <div class="tab disabled" data-tab="export" onclick="switchTab('export')">4. Export</div>
+</div>
+
+<!-- UPLOAD TAB -->
+<div class="content" id="tab-upload">
+  <div class="card">
+    <h2>Upload BusyBusy Time Cards</h2>
+    <p class="desc">Upload the PDF export from BusyBusy. The detailed format with Emp ID, Project #, and Cost Codes works best.</p>
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <div class="icon">📄</div>
+      <div class="label">Drop PDF here or click to browse</div>
+      <div class="hint">Accepts BusyBusy Time Card PDF exports</div>
+    </div>
+    <input type="file" id="fileInput" accept=".pdf" onchange="handleFile(this.files[0])">
+    <div id="parseProgress" class="hidden">
+      <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
+      <div class="mono" id="parseStatus" style="font-size:12px;color:var(--text2)">Parsing...</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Or Paste Time Card Text</h2>
+    <p class="desc">If PDF parsing doesn't work, copy all text from the PDF and paste it here.</p>
+    <textarea id="pasteArea" style="width:100%;height:150px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;resize:vertical" placeholder="Paste BusyBusy time card text here..."></textarea>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="parseFromText()">Parse Text</button>
+    </div>
+  </div>
+</div>
+
+<!-- REVIEW TAB -->
+<div class="content hidden" id="tab-review">
+  <div class="stat-row" id="statsRow"></div>
+  
+  <div class="card">
+    <h2>Parsed Time Entries</h2>
+    <p class="desc">Review the parsed data below. Job entries are green, shop entries are orange.</p>
+    <div class="scroll-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Emp ID</th>
+            <th>Date</th>
+            <th>Project</th>
+            <th>Project #</th>
+            <th>Phase.Cat</th>
+            <th>Description</th>
+            <th>Equipment</th>
+            <th>Hours</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody id="reviewBody"></tbody>
+      </table>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="switchTab('mappings')">Next: Shop Mappings →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAPPINGS TAB -->
+<div class="content hidden" id="tab-mappings">
+  <div class="card">
+    <h2>Shop Code Mappings</h2>
+    <p class="desc">Map each BusyBusy shop cost code to ComputerEase job/phase/category. These mappings are saved for next time.</p>
+    
+    <div id="noShopMsg" class="alert alert-success hidden">No shop entries found — all entries have numeric job codes. You can skip to Export.</div>
+    
+    <div id="mappingsContainer"></div>
+    
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="saveMappings()">Save Mappings</button>
+      <button class="btn btn-primary" onclick="switchTab('export')">Next: Export →</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT TAB -->
+<div class="content hidden" id="tab-export">
+  <div class="card">
+    <h2>Overtime Configuration</h2>
+    <p class="desc">Hours exceeding the weekly threshold will be split into OT rows (type=2) in the CSV.</p>
+    <div class="ot-config">
+      <label>Weekly OT Threshold:</label>
+      <input type="number" id="otThreshold" value="40" min="0" max="80" onchange="recalculate()">
+      <label>hours</label>
+      <label style="margin-left:24px">OT Multiplier:</label>
+      <input type="number" id="otMult" value="1.5" min="1" max="3" step="0.1" style="width:60px">
+    </div>
+  </div>
+
+  <div id="otSummary"></div>
+
+  <div class="card">
+    <h2>CE Import Preview</h2>
+    <p class="desc">This is what will be in the CSV file. Configure your CE Labor Distribution import layout to match these columns.</p>
+    <div class="scroll-table">
+      <table>
+        <thead>
+          <tr>
+            <th>emp</th>
+            <th>type</th>
+            <th>otmult</th>
+            <th>job</th>
+            <th>phase</th>
+            <th>cat</th>
+            <th>worktype</th>
+            <th>hours</th>
+            <th>date</th>
+            <th>des1</th>
+            <th>equipnum</th>
+          </tr>
+        </thead>
+        <tbody id="exportBody"></tbody>
+      </table>
+    </div>
+    <div class="actions">
+      <button class="btn btn-green" onclick="downloadCSV()">⬇ Download CE Import CSV</button>
+      <button class="btn btn-secondary" onclick="downloadCSV('tab')">⬇ Download Tab-Delimited</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let state = {
+  entries: [],        // parsed BusyBusy entries
+  shopCodes: [],      // unique shop codes found
+  shopMappings: {},   // shop code → CE mapping
+  ceRows: [],         // final CE import rows
+  fileName: ''
+};
+
+// ═══════════════════════════════════════════════════════
+// UTILITY FUNCTIONS
+// ═══════════════════════════════════════════════════════
+function hhmmToDecimal(hhmm) {
+  if (!hhmm) return 0;
+  const str = String(hhmm).trim();
+  const m = str.match(/^(\d+):(\d+)$/);
+  if (!m) return parseFloat(str) || 0;
+  return parseInt(m[1]) + parseInt(m[2]) / 60;
+}
+
+function decimalToHHMM(dec) {
+  const h = Math.floor(dec);
+  const m = Math.round((dec - h) * 60);
+  return `${h}:${String(m).padStart(2,'0')}`;
+}
+
+function roundHours(h) {
+  return Math.round(h * 100) / 100;
+}
+
+function formatDate(dateStr) {
+  // Convert "Mar 2" or "2026-03-02" to "03/02/2026"
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
+  return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`;
+}
+
+function parseDateFromLine(text, year) {
+  const months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+  const m = text.match(/(Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d+)/);
+  if (m) {
+    return new Date(year, months[m[2]], parseInt(m[3]));
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════
+// PDF PARSING
+// ═══════════════════════════════════════════════════════
+async function handleFile(file) {
+  if (!file) return;
+  state.fileName = file.name;
+  document.getElementById('fileInfo').textContent = file.name;
+  document.getElementById('parseProgress').classList.remove('hidden');
+  
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+    const totalPages = pdf.numPages;
+    let allText = '';
+    
+    for (let i = 1; i <= totalPages; i++) {
+      document.getElementById('progressFill').style.width = `${(i/totalPages)*100}%`;
+      document.getElementById('parseStatus').textContent = `Parsing page ${i} of ${totalPages}...`;
+      
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      
+      // Group items by y-position into lines
+      const items = textContent.items
+        .filter(item => item.str.trim())
+        .map(item => ({
+          text: item.str,
+          x: Math.round(item.transform[4]),
+          y: Math.round(item.transform[5])
+        }));
+      
+      // Sort by y descending (top to bottom), then x ascending (left to right)
+      items.sort((a, b) => b.y - a.y || a.x - b.x);
+      
+      // Group into lines (items within 4px y-distance)
+      const lines = [];
+      if (items.length > 0) {
+        let currentLine = [items[0]];
+        for (let j = 1; j < items.length; j++) {
+          if (Math.abs(items[j].y - currentLine[0].y) < 4) {
+            currentLine.push(items[j]);
+          } else {
+            // Sort by x within line
+            currentLine.sort((a, b) => a.x - b.x);
+            lines.push(currentLine.map(i => i.text).join(' '));
+            currentLine = [items[j]];
+          }
+        }
+        currentLine.sort((a, b) => a.x - b.x);
+        lines.push(currentLine.map(i => i.text).join(' '));
+      }
+      
+      allText += lines.join('\n') + '\n---PAGE_BREAK---\n';
+    }
+    
+    document.getElementById('parseStatus').textContent = 'Extracting time entries...';
+    parseTimeEntries(allText);
+    
+  } catch (err) {
+    document.getElementById('parseStatus').textContent = `Error: ${err.message}. Try pasting text instead.`;
+    console.error(err);
+  }
+}
+
+function parseFromText() {
+  const text = document.getElementById('pasteArea').value;
+  if (!text.trim()) return;
+  parseTimeEntries(text);
+}
+
+function parseTimeEntries(rawText) {
+  const entries = [];
+  const pages = rawText.split(/---PAGE_BREAK---/);
+  
+  let currentEmployee = null;
+  let currentEmpId = null;
+  let currentYear = new Date().getFullYear();
+  let currentDate = null;
+  
+  // Process all text as a stream of lines
+  const allLines = rawText.replace(/---PAGE_BREAK---/g, '\n').split('\n').map(l => l.trim()).filter(Boolean);
+  
+  // Detect year from header
+  const yearMatch = rawText.match(/\b(202\d)\b/);
+  if (yearMatch) currentYear = parseInt(yearMatch[1]);
+  
+  let i = 0;
+  while (i < allLines.length) {
+    const line = allLines[i];
+    
+    // Detect employee header: "Emp. ID: XXXXX" or "Emp. ID: XXXXX Start:"
+    const empIdMatch = line.match(/Emp\.?\s*ID:\s*(\w+)/i);
+    if (empIdMatch) {
+      currentEmpId = empIdMatch[1];
+      // Employee name is usually on a prior line - look back
+      for (let back = i - 1; back >= Math.max(0, i - 5); back--) {
+        const prevLine = allLines[back];
+        // Skip lines that are obviously not names
+        if (prevLine.match(/^(Date|Start|Stop|Total|Entry|Project|Generated|Provided|AJK|---)/i)) continue;
+        if (prevLine.match(/Emp\.?\s*ID:/i)) continue;
+        if (prevLine.match(/Group:/i)) continue;
+        if (prevLine.match(/\d{2}:\d{2}/)) continue;
+        // This might be the name
+        if (prevLine.match(/^[A-Z][a-z]+\s+[A-Z][a-z]+/)) {
+          currentEmployee = prevLine.replace(/\s+AJK.*$/i, '').trim();
+          break;
+        }
+      }
+      i++;
+      continue;
+    }
+    
+    // Also catch "Emp. ID:" on a line by itself followed by the ID
+    if (line.match(/^Emp\.?\s*ID:$/i) && i + 1 < allLines.length) {
+      const nextLine = allLines[i + 1].trim();
+      if (nextLine.match(/^\w+$/)) {
+        currentEmpId = nextLine;
+        i += 2;
+        continue;
+      }
+    }
+    
+    // Detect date line: "Mon, Mar 2" or similar, with optional daily total
+    const dateMatch = line.match(/(Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*(\d+)/i);
+    if (dateMatch && !line.match(/^(Start|End|Sun,.*Sat,)/i)) {
+      currentDate = parseDateFromLine(line, currentYear);
+      i++;
+      continue;
+    }
+    
+    // Detect time entry line: starts with time like "6:30 AM" or contains "Project:" 
+    const entryTimeMatch = line.match(/^(\d{1,2}:\d{2}\s*[AP]M)\s+(\d{1,2}:\d{2}\s*[AP]M)\s+(\d{2}:\d{2})/i);
+    
+    // Also detect "Project:" on a line (sometimes merged)
+    const projectOnLine = line.match(/Project:\s*(.+)/i);
+    
+    if (entryTimeMatch || projectOnLine) {
+      // Start collecting an entry
+      let project = null, projectNum = null, costCode = null, costCodeDesc = null;
+      let equipment = null, description = null, entryHours = null;
+      let startTime = entryTimeMatch ? entryTimeMatch[1] : null;
+      let stopTime = entryTimeMatch ? entryTimeMatch[2] : null;
+      let breaks = entryTimeMatch ? entryTimeMatch[3] : '00:00';
+      
+      // Check if project info is on the same line as times
+      if (entryTimeMatch) {
+        const afterTimes = line.substring(line.indexOf(entryTimeMatch[3]) + entryTimeMatch[3].length);
+        const projMatch = afterTimes.match(/Project:\s*(.+)/i);
+        if (projMatch) project = projMatch[1].trim();
+      } else if (projectOnLine) {
+        project = projectOnLine[1].trim();
+      }
+      
+      // Look ahead for more details
+      let j = i + 1;
+      while (j < allLines.length && j < i + 12) {
+        const nextLine = allLines[j];
+        
+        // Stop if we hit a new date, new employee, or another time entry
+        if (nextLine.match(/(Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*\d+/i) && !nextLine.match(/^(Start|End)/i)) break;
+        if (nextLine.match(/Emp\.?\s*ID:/i)) break;
+        if (nextLine.match(/^Total\s+\d/)) break;
+        if (nextLine.match(/^Generated\s+By/i)) break;
+        if (nextLine.match(/^\d{1,2}:\d{2}\s*[AP]M\s+\d{1,2}:\d{2}\s*[AP]M/i) && j > i + 1) break;
+        
+        // Extract fields
+        const projMatch = nextLine.match(/^Project:\s*(.+)/i);
+        const projNumMatch = nextLine.match(/^Project\s*#:\s*(.+)/i);
+        const costMatch = nextLine.match(/^Cost\s*Code:\s*(.+)/i);
+        const equipMatch = nextLine.match(/^Equipment:\s*(.+)/i);
+        const descMatch = nextLine.match(/^Description:\s*(.+)/i);
+        const entryMatch = nextLine.match(/^Entry\s+(\d+:\d+)/i);
+        
+        if (projMatch && !project) project = projMatch[1].trim();
+        else if (projNumMatch) projectNum = projNumMatch[1].trim();
+        else if (costMatch) {
+          const cc = costMatch[1].trim();
+          // Check if numeric cost code (e.g., "31.3105 PREP FOR SLABS")
+          const numCC = cc.match(/^(\d+\.\d+)\s*(.*)/);
+          if (numCC) {
+            costCode = numCC[1];
+            costCodeDesc = numCC[2] || '';
+          } else {
+            // Shop cost code - take the code name and description
+            costCode = null;
+            costCodeDesc = cc;
+          }
+        }
+        else if (equipMatch) equipment = equipMatch[1].trim();
+        else if (descMatch) description = descMatch[1].trim();
+        else if (entryMatch) {
+          entryHours = hhmmToDecimal(entryMatch[1]);
+          j++;
+          break;
+        }
+        // Also handle "Project #:" on same line as "Project:"
+        else if (nextLine.match(/^\d{2}-\d{3}$/)) {
+          projectNum = nextLine.trim();
+        }
+        
+        j++;
+      }
+      
+      // Build entry if we have enough data
+      if (currentDate && entryHours > 0) {
+        const isShop = !costCode && (project === 'Shop' || projectNum === 'AJK General Shop Work' || !projectNum || !projectNum.match(/^\d{2}-\d{3}/));
+        
+        // For shop entries, extract the shop code name from costCodeDesc
+        let shopCode = null;
+        if (isShop && costCodeDesc) {
+          // Shop code format: "AJK Trucking Moving equipment / hauling aggregates"
+          // or "Mechanic Equipment repair work"
+          // or "Office Office work"
+          // The first part before the description is the code name
+          // Try common patterns
+          const shopPatterns = [
+            /^(AJK Trucking)\s+(.*)/i,
+            /^(Mechanic)\s+(.*)/i,
+            /^(Miscellaneous Shop)\s+(.*)/i,
+            /^(Office)\s+(.*)/i,
+            /^(.+?)\s{2,}(.*)/,  // Double space separator
+          ];
+          for (const pat of shopPatterns) {
+            const sm = costCodeDesc.match(pat);
+            if (sm) {
+              shopCode = sm[1].trim();
+              break;
+            }
+          }
+          if (!shopCode) shopCode = costCodeDesc.split(/\s{2,}/)[0] || costCodeDesc;
+        }
+        
+        entries.push({
+          employee: currentEmployee || 'Unknown',
+          empId: currentEmpId || 'UNK',
+          date: currentDate,
+          dateStr: formatDate(currentDate.toISOString().split('T')[0]),
+          startTime: startTime,
+          stopTime: stopTime,
+          breaks: breaks,
+          project: project,
+          projectNum: isShop ? '' : (projectNum || ''),
+          costCode: costCode || '',
+          costCodeDesc: costCodeDesc || '',
+          equipment: equipment || '',
+          description: description || '',
+          hours: roundHours(entryHours),
+          isShop: isShop,
+          shopCode: shopCode || ''
+        });
+      }
+      
+      i = j;
+      continue;
+    }
+    
+    i++;
+  }
+  
+  state.entries = entries;
+  
+  // Extract unique shop codes
+  const shopSet = new Set();
+  entries.filter(e => e.isShop).forEach(e => {
+    if (e.shopCode) shopSet.add(e.shopCode);
+    else if (e.costCodeDesc) shopSet.add(e.costCodeDesc);
+  });
+  state.shopCodes = Array.from(shopSet).sort();
+  
+  // Load saved mappings
+  loadMappings();
+  
+  // Update UI
+  finishParsing();
+}
+
+function finishParsing() {
+  const n = state.entries.length;
+  const shopN = state.shopCodes.length;
+  
+  document.getElementById('entryCount').textContent = n;
+  document.getElementById('entryCount').style.display = n > 0 ? 'inline' : 'none';
+  document.getElementById('shopCount').textContent = shopN;
+  document.getElementById('shopCount').style.display = shopN > 0 ? 'inline' : 'none';
+  
+  // Enable tabs
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('disabled'));
+  
+  // Render review
+  renderReview();
+  renderMappings();
+  
+  // Switch to review
+  switchTab('review');
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
+  
+  ['upload','review','mappings','export'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
+  });
+  
+  if (tab === 'export') recalculate();
+}
+
+// ═══════════════════════════════════════════════════════
+// REVIEW RENDERING
+// ═══════════════════════════════════════════════════════
+function renderReview() {
+  const entries = state.entries;
+  
+  // Stats
+  const employees = new Set(entries.map(e => e.empId));
+  const totalHours = entries.reduce((s, e) => s + e.hours, 0);
+  const jobHours = entries.filter(e => !e.isShop).reduce((s, e) => s + e.hours, 0);
+  const shopHours = entries.filter(e => e.isShop).reduce((s, e) => s + e.hours, 0);
+  const dates = new Set(entries.map(e => e.dateStr));
+  
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat"><div class="label">Entries</div><div class="value">${entries.length}</div></div>
+    <div class="stat"><div class="label">Employees</div><div class="value">${employees.size}</div></div>
+    <div class="stat"><div class="label">Total Hours</div><div class="value">${roundHours(totalHours)}</div></div>
+    <div class="stat"><div class="label">Job Hours</div><div class="value" style="color:var(--green)">${roundHours(jobHours)}</div></div>
+    <div class="stat"><div class="label">Shop Hours</div><div class="value" style="color:var(--orange)">${roundHours(shopHours)}</div></div>
+    <div class="stat"><div class="label">Days</div><div class="value">${dates.size}</div></div>
+  `;
+  
+  // Table
+  const tbody = document.getElementById('reviewBody');
+  tbody.innerHTML = entries.map(e => `
+    <tr>
+      <td>${e.employee}</td>
+      <td class="mono">${e.empId}</td>
+      <td class="mono">${e.dateStr}</td>
+      <td>${e.project || ''}</td>
+      <td class="mono">${e.projectNum || (e.isShop ? '—' : '')}</td>
+      <td class="mono">${e.costCode || (e.shopCode ? `<span style="color:var(--orange)">${e.shopCode}</span>` : '')}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.costCodeDesc || e.description || ''}</td>
+      <td class="mono">${e.equipment || ''}</td>
+      <td class="mono" style="text-align:right;font-weight:600">${e.hours.toFixed(2)}</td>
+      <td>${e.isShop ? '<span class="tag tag-shop">SHOP</span>' : '<span class="tag tag-job">JOB</span>'}</td>
+    </tr>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// SHOP MAPPINGS
+// ═══════════════════════════════════════════════════════
+function renderMappings() {
+  if (state.shopCodes.length === 0) {
+    document.getElementById('noShopMsg').classList.remove('hidden');
+    document.getElementById('mappingsContainer').innerHTML = '';
+    return;
+  }
+  document.getElementById('noShopMsg').classList.add('hidden');
+  
+  let html = `
+    <div class="mapping-row header">
+      <div>Shop Code</div>
+      <div>CE Description (des1)</div>
+      <div>CE Job #</div>
+      <div>Phase</div>
+      <div>Category</div>
+      <div>Work Type</div>
+    </div>
+  `;
+  
+  state.shopCodes.forEach(code => {
+    const m = state.shopMappings[code] || {};
+    const count = state.entries.filter(e => e.shopCode === code || e.costCodeDesc === code).length;
+    html += `
+      <div class="mapping-row">
+        <div>
+          <strong>${code}</strong>
+          <div style="font-size:11px;color:var(--text2)">${count} entries</div>
+        </div>
+        <div><input type="text" data-code="${code}" data-field="des1" value="${m.des1 || code}" placeholder="Description"></div>
+        <div><input type="text" data-code="${code}" data-field="job" value="${m.job || ''}" placeholder="Job #"></div>
+        <div><input type="text" data-code="${code}" data-field="phase" value="${m.phase || ''}" placeholder="Phase"></div>
+        <div><input type="text" data-code="${code}" data-field="cat" value="${m.cat || ''}" placeholder="Cat"></div>
+        <div>
+          <select data-code="${code}" data-field="worktype">
+            <option value="2" ${(m.worktype||2)==2?'selected':''}>2 - Shop</option>
+            <option value="1" ${m.worktype==1?'selected':''}>1 - Job</option>
+            <option value="3" ${m.worktype==3?'selected':''}>3 - Travel</option>
+          </select>
+        </div>
+      </div>
+    `;
+  });
+  
+  document.getElementById('mappingsContainer').innerHTML = html;
+  
+  // Add event listeners
+  document.querySelectorAll('#mappingsContainer input, #mappingsContainer select').forEach(el => {
+    el.addEventListener('change', () => {
+      const code = el.dataset.code;
+      const field = el.dataset.field;
+      if (!state.shopMappings[code]) state.shopMappings[code] = {};
+      state.shopMappings[code][field] = el.value;
+    });
+  });
+}
+
+function saveMappings() {
+  // Collect current values from inputs
+  document.querySelectorAll('#mappingsContainer input, #mappingsContainer select').forEach(el => {
+    const code = el.dataset.code;
+    const field = el.dataset.field;
+    if (!state.shopMappings[code]) state.shopMappings[code] = {};
+    state.shopMappings[code][field] = el.value;
+  });
+  
+  try {
+    localStorage.setItem('bb_ce_shopMappings', JSON.stringify(state.shopMappings));
+  } catch(e) {}
+  
+  // Also try persistent storage
+  if (window.storage) {
+    window.storage.set('shop-mappings', JSON.stringify(state.shopMappings)).catch(() => {});
+  }
+  
+  alert('Mappings saved!');
+}
+
+function loadMappings() {
+  try {
+    const saved = localStorage.getItem('bb_ce_shopMappings');
+    if (saved) state.shopMappings = JSON.parse(saved);
+  } catch(e) {}
+  
+  if (window.storage) {
+    window.storage.get('shop-mappings').then(result => {
+      if (result && result.value) {
+        const parsed = JSON.parse(result.value);
+        // Merge with any existing
+        state.shopMappings = {...parsed, ...state.shopMappings};
+        renderMappings();
+      }
+    }).catch(() => {});
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// OT CALCULATION & EXPORT
+// ═══════════════════════════════════════════════════════
+function recalculate() {
+  // Collect mapping values first
+  document.querySelectorAll('#mappingsContainer input, #mappingsContainer select').forEach(el => {
+    const code = el.dataset.code;
+    const field = el.dataset.field;
+    if (!state.shopMappings[code]) state.shopMappings[code] = {};
+    state.shopMappings[code][field] = el.value;
+  });
+
+  const threshold = parseFloat(document.getElementById('otThreshold').value) || 40;
+  const otMult = parseFloat(document.getElementById('otMult').value) || 1.5;
+  
+  // Group entries by employee
+  const byEmployee = {};
+  state.entries.forEach(e => {
+    if (!byEmployee[e.empId]) byEmployee[e.empId] = {name: e.employee, entries: []};
+    byEmployee[e.empId].entries.push({...e});
+  });
+  
+  const ceRows = [];
+  let otSummaryHtml = '';
+  
+  Object.keys(byEmployee).sort().forEach(empId => {
+    const emp = byEmployee[empId];
+    // Sort by date, then by start time
+    emp.entries.sort((a, b) => a.date - b.date);
+    
+    const totalHours = emp.entries.reduce((s, e) => s + e.hours, 0);
+    let regHours = Math.min(totalHours, threshold);
+    let otHours = Math.max(0, totalHours - threshold);
+    
+    let accumulated = 0;
+    
+    emp.entries.forEach(entry => {
+      const mapping = entry.isShop ? (state.shopMappings[entry.shopCode] || state.shopMappings[entry.costCodeDesc] || {}) : {};
+      
+      // Determine CE fields
+      let job, phase, cat, worktype, des1;
+      
+      if (entry.isShop) {
+        job = mapping.job || '';
+        phase = mapping.phase || '';
+        cat = mapping.cat || '';
+        worktype = parseInt(mapping.worktype) || 2;
+        des1 = (mapping.des1 || entry.shopCode || entry.costCodeDesc || '').substring(0, 30);
+      } else {
+        job = entry.projectNum || '';
+        // Parse phase.cat from costCode "31.3105"
+        const ccParts = entry.costCode.split('.');
+        phase = ccParts[0] || '';
+        cat = ccParts[1] || '';
+        worktype = 1;
+        des1 = (entry.costCodeDesc || entry.description || '').substring(0, 30);
+      }
+      
+      const prevAccum = accumulated;
+      accumulated += entry.hours;
+      
+      if (prevAccum >= threshold) {
+        // All OT
+        ceRows.push({
+          emp: empId, type: 2, otmult: otMult,
+          job, phase, cat, worktype,
+          hours: roundHours(entry.hours),
+          date: entry.dateStr,
+          des1, equipnum: entry.equipment || ''
+        });
+      } else if (accumulated > threshold) {
+        // Split: some reg, some OT
+        const regPortion = roundHours(threshold - prevAccum);
+        const otPortion = roundHours(entry.hours - regPortion);
+        
+        if (regPortion > 0) {
+          ceRows.push({
+            emp: empId, type: 1, otmult: '',
+            job, phase, cat, worktype,
+            hours: regPortion,
+            date: entry.dateStr,
+            des1, equipnum: entry.equipment || ''
+          });
+        }
+        if (otPortion > 0) {
+          ceRows.push({
+            emp: empId, type: 2, otmult: otMult,
+            job, phase, cat, worktype,
+            hours: otPortion,
+            date: entry.dateStr,
+            des1, equipnum: entry.equipment || ''
+          });
+        }
+      } else {
+        // All regular
+        ceRows.push({
+          emp: empId, type: 1, otmult: '',
+          job, phase, cat, worktype,
+          hours: roundHours(entry.hours),
+          date: entry.dateStr,
+          des1, equipnum: entry.equipment || ''
+        });
+      }
+    });
+    
+    const hasOT = otHours > 0;
+    otSummaryHtml += `
+      <div class="emp-header" style="margin-bottom:4px">
+        <span>${emp.name} (${empId})</span>
+        <span class="mono">
+          ${roundHours(totalHours)} total
+          ${hasOT ? `&nbsp;=&nbsp;<span style="color:var(--accent2)">${roundHours(regHours)} reg</span>&nbsp;+&nbsp;<span style="color:var(--red)">${roundHours(otHours)} OT</span>` : 
+            `&nbsp;<span style="color:var(--green)">all regular</span>`}
+        </span>
+      </div>
+    `;
+  });
+  
+  state.ceRows = ceRows;
+  
+  // OT Summary
+  document.getElementById('otSummary').innerHTML = `
+    <div class="card">
+      <h2>Employee Hours Summary</h2>
+      <p class="desc">Weekly totals and OT breakdown per employee (threshold: ${threshold} hrs)</p>
+      ${otSummaryHtml}
+    </div>
+  `;
+  
+  // Export table
+  const tbody = document.getElementById('exportBody');
+  tbody.innerHTML = ceRows.map(r => `
+    <tr>
+      <td class="mono">${r.emp}</td>
+      <td>${r.type === 2 ? '<span class="tag tag-ot">2-OT</span>' : '<span class="tag tag-reg">1-REG</span>'}</td>
+      <td class="mono">${r.otmult || ''}</td>
+      <td class="mono">${r.job}</td>
+      <td class="mono">${r.phase}</td>
+      <td class="mono">${r.cat}</td>
+      <td class="mono">${r.worktype}</td>
+      <td class="mono" style="text-align:right">${r.hours.toFixed(2)}</td>
+      <td class="mono">${r.date}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.des1}</td>
+      <td class="mono">${r.equipnum}</td>
+    </tr>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// CSV DOWNLOAD
+// ═══════════════════════════════════════════════════════
+function downloadCSV(format) {
+  const delim = format === 'tab' ? '\t' : ',';
+  const ext = format === 'tab' ? 'txt' : 'csv';
+  
+  const headers = ['emp','type','otmult','job','phase','cat','worktype','hours','date','des1','equipnum'];
+  
+  let csv = headers.join(delim) + '\n';
+  
+  state.ceRows.forEach(r => {
+    const row = headers.map(h => {
+      let val = String(r[h] || '');
+      // Quote if contains delimiter or quotes
+      if (val.includes(delim) || val.includes('"') || val.includes('\n')) {
+        val = '"' + val.replace(/"/g, '""') + '"';
+      }
+      return val;
+    });
+    csv += row.join(delim) + '\n';
+  });
+  
+  const blob = new Blob([csv], {type: 'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  
+  // Name based on source file
+  const baseName = state.fileName ? state.fileName.replace(/\.pdf$/i, '') : 'CE_Payroll_Import';
+  a.download = `${baseName}_CE_Import.${ext}`;
+  
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════════════
+// DRAG & DROP
+// ═══════════════════════════════════════════════════════
+const dropZone = document.getElementById('dropZone');
+
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('dragover');
+});
+
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('dragover');
+});
+
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') {
+    handleFile(file);
+  }
+});
+
+// Initialize pdf.js worker
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+</script>
+</body>
+</html>
