@@ -18,14 +18,25 @@
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
   ];
   window._pdfWorkerSources = workerSources;
+  window._pdfLoadStatus = 'loading';
   function tryLoad(idx) {
     if (idx >= sources.length) {
-      console.error('All pdf.js CDN sources blocked. PDF upload will not work - use paste instead.');
+      window._pdfLoadStatus = 'failed';
+      console.error('All pdf.js CDN sources blocked.');
+      // Show error on page once DOM is ready
+      document.addEventListener('DOMContentLoaded', function() {
+        var hint = document.querySelector('.drop-zone .hint');
+        if (hint) hint.innerHTML = '<span style="color:#ef4444">⚠ PDF library failed to load. Use "Paste Time Card Text" below instead.</span>';
+      });
       return;
     }
     var s = document.createElement('script');
     s.src = sources[idx];
-    s.onload = function() { window._pdfjsLoadedFrom = idx; if (typeof initPdfWorker === 'function') initPdfWorker(); };
+    s.onload = function() {
+      window._pdfjsLoadedFrom = idx;
+      window._pdfLoadStatus = 'ready';
+      if (typeof initPdfWorker === 'function') initPdfWorker();
+    };
     s.onerror = function() { console.warn('pdf.js blocked from: ' + sources[idx]); tryLoad(idx + 1); };
     document.head.appendChild(s);
   }
@@ -381,15 +392,15 @@
 <!-- MAPPINGS TAB -->
 <div class="content hidden" id="tab-mappings">
  <div class="card">
-   <h2>Shop Code Mappings</h2>
-   <p class="desc">Map each BusyBusy shop cost code to ComputerEase job/phase/category. These mappings are saved for next time.</p>
+   <h2>Shop Entry Review</h2>
+   <p class="desc">Mechanic and Miscellaneous Shop entries export with no job code. AJK Trucking entries need to be categorized below.</p>
 
    <div id="noShopMsg" class="alert alert-success hidden">No shop entries found — all entries have numeric job codes. You can skip to Export.</div>
 
-   <div id="mappingsContainer"></div>
+   <div id="shopSummary"></div>
+   <div id="truckingContainer"></div>
 
    <div class="actions">
-     <button class="btn btn-secondary" onclick="saveMappings()">Save Mappings</button>
      <button class="btn btn-primary" onclick="switchTab('export')">Next: Export →</button>
    </div>
  </div>
@@ -447,7 +458,8 @@
 let state = {
  entries: [],        // parsed BusyBusy entries
  shopCodes: [],      // unique shop codes found
- shopMappings: {},   // shop code → CE mapping
+ shopMappings: {},   // shop code → CE mapping (legacy)
+ truckingTypes: {},  // entry index → { type: 'shop'|'small'|'job', jobCode: '' }
  ceRows: [],         // final CE import rows
  fileName: ''
 };
@@ -558,13 +570,19 @@ async function handleFile(file) {
      allText += lines.join('\n') + '\n';
    }
 
-   document.getElementById('parseStatus').textContent = 'Extracting time entries...';
    document.getElementById('progressFill').style.width = '100%';
 
-   // Debug: show raw text in console
+   // Debug: show raw text in console and paste area for visibility
    console.log('=== RAW PDF TEXT ===');
-   console.log(allText.substring(0, 3000));
+   console.log(allText);
+   document.getElementById('pasteArea').value = allText;
 
+   if (!allText.trim()) {
+     document.getElementById('parseStatus').innerHTML = '<span style="color:var(--red)">No text found in PDF. This usually means it was "Printed to PDF" instead of "Saved as PDF" from BusyBusy. <br>Go back to BusyBusy and use <b>Save As PDF</b> (not Print to PDF) to export the time cards.</span>';
+     return;
+   }
+
+   document.getElementById('parseStatus').textContent = 'Extracting time entries...';
    parseTimeEntries(allText);
 
  } catch (err) {
@@ -974,120 +992,164 @@ function renderReview() {
 // SHOP MAPPINGS
 // ═══════════════════════════════════════════════════════
 function renderMappings() {
- if (state.shopCodes.length === 0) {
+ const shopEntries = state.entries.filter(e => e.isShop);
+ if (shopEntries.length === 0) {
    document.getElementById('noShopMsg').classList.remove('hidden');
-   document.getElementById('mappingsContainer').innerHTML = '';
+   document.getElementById('shopSummary').innerHTML = '';
+   document.getElementById('truckingContainer').innerHTML = '';
    return;
  }
  document.getElementById('noShopMsg').classList.add('hidden');
 
- let html = `
-   <div class="mapping-row header">
-     <div>Shop Code</div>
-     <div>CE Description (des1)</div>
-     <div>CE Job #</div>
-     <div>Phase</div>
-     <div>Category</div>
-     <div>Work Type</div>
+ // Summarize non-trucking shop entries
+ const mechanicEntries = shopEntries.filter(e => e.shopCode === 'Mechanic');
+ const miscEntries = shopEntries.filter(e => e.shopCode === 'Miscellaneous Shop');
+ const officeEntries = shopEntries.filter(e => e.shopCode === 'Office');
+ const truckingEntries = shopEntries.filter(e => e.shopCode === 'AJK Trucking');
+ const otherEntries = shopEntries.filter(e =>
+   e.shopCode !== 'Mechanic' && e.shopCode !== 'Miscellaneous Shop' &&
+   e.shopCode !== 'Office' && e.shopCode !== 'AJK Trucking'
+ );
+
+ let summaryHtml = '';
+ const summaryItems = [];
+ if (mechanicEntries.length > 0) {
+   const hrs = mechanicEntries.reduce((s, e) => s + e.hours, 0);
+   summaryItems.push(`<strong>Mechanic:</strong> ${mechanicEntries.length} entries (${roundHours(hrs)} hrs) — no job code`);
+ }
+ if (miscEntries.length > 0) {
+   const hrs = miscEntries.reduce((s, e) => s + e.hours, 0);
+   summaryItems.push(`<strong>Misc Shop:</strong> ${miscEntries.length} entries (${roundHours(hrs)} hrs) — no job code`);
+ }
+ if (officeEntries.length > 0) {
+   const hrs = officeEntries.reduce((s, e) => s + e.hours, 0);
+   summaryItems.push(`<strong>Office:</strong> ${officeEntries.length} entries (${roundHours(hrs)} hrs) — no job code`);
+ }
+ if (otherEntries.length > 0) {
+   const hrs = otherEntries.reduce((s, e) => s + e.hours, 0);
+   const codes = [...new Set(otherEntries.map(e => e.shopCode))].join(', ');
+   summaryItems.push(`<strong>Other (${codes}):</strong> ${otherEntries.length} entries (${roundHours(hrs)} hrs) — no job code`);
+ }
+
+ if (summaryItems.length > 0) {
+   summaryHtml = `<div style="margin-bottom:16px;padding:12px;background:var(--bg2);border-radius:8px">
+     <div style="font-weight:600;margin-bottom:6px">Non-Trucking Shop Entries</div>
+     ${summaryItems.map(s => `<div style="font-size:13px;margin:2px 0">${s}</div>`).join('')}
+   </div>`;
+ }
+ document.getElementById('shopSummary').innerHTML = summaryHtml;
+
+ // Trucking entries — each needs categorization
+ if (truckingEntries.length === 0) {
+   document.getElementById('truckingContainer').innerHTML = '';
+   return;
+ }
+
+ let tHtml = `
+   <div style="font-weight:600;margin-bottom:8px">AJK Trucking Entries — Assign Type</div>
+   <div class="mapping-row header" style="grid-template-columns: 1fr 1fr 80px 1fr 1fr">
+     <div>Employee</div>
+     <div>Date</div>
+     <div>Hours</div>
+     <div>Type</div>
+     <div>Job Code</div>
    </div>
  `;
 
- state.shopCodes.forEach(code => {
-   const m = state.shopMappings[code] || {};
-   const count = state.entries.filter(e => e.shopCode === code || e.costCodeDesc === code).length;
-   html += `
-     <div class="mapping-row">
+ truckingEntries.forEach(entry => {
+   const idx = state.entries.indexOf(entry);
+   const td = state.truckingTypes[idx] || { type: 'shop' };
+   tHtml += `
+     <div class="mapping-row" style="grid-template-columns: 1fr 1fr 80px 1fr 1fr">
+       <div>${entry.employee}</div>
+       <div class="mono">${entry.dateStr}</div>
+       <div class="mono" style="text-align:right">${entry.hours.toFixed(2)}</div>
        <div>
-         <strong>${code}</strong>
-         <div style="font-size:11px;color:var(--text2)">${count} entries</div>
-       </div>
-       <div><input type="text" data-code="${code}" data-field="des1" value="${m.des1 || code}" placeholder="Description"></div>
-       <div><input type="text" data-code="${code}" data-field="job" value="${m.job || ''}" placeholder="Job #"></div>
-       <div><input type="text" data-code="${code}" data-field="phase" value="${m.phase || ''}" placeholder="Phase"></div>
-       <div><input type="text" data-code="${code}" data-field="cat" value="${m.cat || ''}" placeholder="Cat"></div>
-       <div>
-         <select data-code="${code}" data-field="worktype">
-           <option value="2" ${(m.worktype||2)==2?'selected':''}>2 - Shop</option>
-           <option value="1" ${m.worktype==1?'selected':''}>1 - Job</option>
-           <option value="3" ${m.worktype==3?'selected':''}>3 - Travel</option>
+         <select data-idx="${idx}" data-field="trucktype" style="width:100%">
+           <option value="shop" ${td.type === 'shop' ? 'selected' : ''}>Shop Trucking</option>
+           <option value="small" ${td.type === 'small' ? 'selected' : ''}>Small Trucking Job</option>
+           <option value="job" ${td.type === 'job' ? 'selected' : ''}>Job Trucking</option>
          </select>
+       </div>
+       <div>
+         <input type="text" data-idx="${idx}" data-field="truckjob" value="${td.jobCode || ''}"
+           placeholder="${td.type === 'small' ? '26-000.03.1010' : 'Enter job code'}"
+           ${td.type === 'shop' ? 'disabled style="opacity:0.4"' : ''}
+           ${td.type === 'small' ? 'disabled style="opacity:0.4"' : ''}>
        </div>
      </div>
    `;
  });
 
- document.getElementById('mappingsContainer').innerHTML = html;
+ document.getElementById('truckingContainer').innerHTML = tHtml;
 
- // Add event listeners
- document.querySelectorAll('#mappingsContainer input, #mappingsContainer select').forEach(el => {
-   el.addEventListener('change', () => {
-     const code = el.dataset.code;
-     const field = el.dataset.field;
-     if (!state.shopMappings[code]) state.shopMappings[code] = {};
-     state.shopMappings[code][field] = el.value;
+ // Event listeners for trucking selects
+ document.querySelectorAll('#truckingContainer select[data-field="trucktype"]').forEach(sel => {
+   sel.addEventListener('change', () => {
+     const idx = sel.dataset.idx;
+     if (!state.truckingTypes[idx]) state.truckingTypes[idx] = {};
+     state.truckingTypes[idx].type = sel.value;
+     const jobInput = document.querySelector(`#truckingContainer input[data-idx="${idx}"]`);
+     if (sel.value === 'shop') {
+       jobInput.disabled = true;
+       jobInput.style.opacity = '0.4';
+       jobInput.value = '';
+       jobInput.placeholder = 'N/A';
+     } else if (sel.value === 'small') {
+       jobInput.disabled = true;
+       jobInput.style.opacity = '0.4';
+       jobInput.value = '';
+       jobInput.placeholder = '26-000.03.1010';
+     } else {
+       jobInput.disabled = false;
+       jobInput.style.opacity = '1';
+       jobInput.placeholder = 'Enter job code';
+     }
+   });
+ });
+
+ document.querySelectorAll('#truckingContainer input[data-field="truckjob"]').forEach(inp => {
+   inp.addEventListener('change', () => {
+     const idx = inp.dataset.idx;
+     if (!state.truckingTypes[idx]) state.truckingTypes[idx] = {};
+     state.truckingTypes[idx].jobCode = inp.value;
    });
  });
 }
 
 function saveMappings() {
- // Collect current values from inputs
- document.querySelectorAll('#mappingsContainer input, #mappingsContainer select').forEach(el => {
-   const code = el.dataset.code;
-   const field = el.dataset.field;
-   if (!state.shopMappings[code]) state.shopMappings[code] = {};
-   state.shopMappings[code][field] = el.value;
+ // Collect trucking values from inputs
+ document.querySelectorAll('#truckingContainer select[data-field="trucktype"]').forEach(sel => {
+   const idx = sel.dataset.idx;
+   if (!state.truckingTypes[idx]) state.truckingTypes[idx] = {};
+   state.truckingTypes[idx].type = sel.value;
  });
-
- try {
-   localStorage.setItem('bb_ce_shopMappings', JSON.stringify(state.shopMappings));
- } catch(e) {}
-
- // Also try persistent storage
- if (window.storage) {
-   window.storage.set('shop-mappings', JSON.stringify(state.shopMappings)).catch(() => {});
- }
-
- alert('Mappings saved!');
+ document.querySelectorAll('#truckingContainer input[data-field="truckjob"]').forEach(inp => {
+   const idx = inp.dataset.idx;
+   if (!state.truckingTypes[idx]) state.truckingTypes[idx] = {};
+   state.truckingTypes[idx].jobCode = inp.value;
+ });
 }
 
 function loadMappings() {
- try {
-   const saved = localStorage.getItem('bb_ce_shopMappings');
-   if (saved) state.shopMappings = JSON.parse(saved);
- } catch(e) {}
-
- if (window.storage) {
-   window.storage.get('shop-mappings').then(result => {
-     if (result && result.value) {
-       const parsed = JSON.parse(result.value);
-       // Merge with any existing
-       state.shopMappings = {...parsed, ...state.shopMappings};
-       renderMappings();
-     }
-   }).catch(() => {});
- }
+ // No persistent mappings needed for per-upload trucking designations
 }
 
 // ═══════════════════════════════════════════════════════
 // OT CALCULATION & EXPORT
 // ═══════════════════════════════════════════════════════
 function recalculate() {
- // Collect mapping values first
- document.querySelectorAll('#mappingsContainer input, #mappingsContainer select').forEach(el => {
-   const code = el.dataset.code;
-   const field = el.dataset.field;
-   if (!state.shopMappings[code]) state.shopMappings[code] = {};
-   state.shopMappings[code][field] = el.value;
- });
+ // Collect trucking designations from UI
+ saveMappings();
 
  const threshold = parseFloat(document.getElementById('otThreshold').value) || 40;
  const otMult = parseFloat(document.getElementById('otMult').value) || 1.5;
 
- // Group entries by employee
+ // Group entries by employee (preserve original index for trucking lookups)
  const byEmployee = {};
- state.entries.forEach(e => {
+ state.entries.forEach((e, idx) => {
    if (!byEmployee[e.empId]) byEmployee[e.empId] = {name: e.employee, entries: []};
-   byEmployee[e.empId].entries.push({...e});
+   byEmployee[e.empId].entries.push({...e, _origIdx: idx});
  });
 
  const ceRows = [];
@@ -1105,18 +1167,12 @@ function recalculate() {
    let accumulated = 0;
 
    emp.entries.forEach(entry => {
-     const mapping = entry.isShop ? (state.shopMappings[entry.shopCode] || state.shopMappings[entry.costCodeDesc] || {}) : {};
-
      // Determine CE fields
      let job, phase, cat, worktype, des1, department, empClass;
 
      if (entry.isShop) {
-       job = mapping.job || '';
-       phase = mapping.phase || '';
-       cat = mapping.cat || '';
-       worktype = parseInt(mapping.worktype) || 2;
        des1 = '';
-       // Shop + AJK Trucking → DRIVER, Shop + equipment → MECHANIC, else LAB GEN
+       // AJK Trucking → DRIVER, equipment → MECHANIC, else LAB GEN
        if (entry.costCodeDesc && entry.costCodeDesc.match(/AJK\s*Trucking/i)) {
          empClass = 'DRIVER';
        } else if (entry.equipment) {
@@ -1125,8 +1181,29 @@ function recalculate() {
          empClass = 'LAB GEN';
        }
        department = entry.costCodeDesc && entry.costCodeDesc.match(/office|admin/i) ? 'ADMIN' : 'SHOP';
-       // Shop & Admin: no cost code in CE
-       job = ''; phase = ''; cat = '';
+
+       // AJK Trucking: use trucking type designation
+       const isTrucking = entry.shopCode === 'AJK Trucking';
+       const td = isTrucking ? (state.truckingTypes[entry._origIdx] || { type: 'shop' }) : null;
+
+       if (isTrucking && td.type === 'small') {
+         // Small trucking job: fixed code 26-000.03.1010
+         job = '26-000'; phase = '03'; cat = '1010';
+         worktype = 1;
+         department = 'FIELD';
+       } else if (isTrucking && td.type === 'job') {
+         // Job trucking: user-assigned code
+         const parts = (td.jobCode || '').split('.');
+         job = parts[0] || '';
+         phase = parts[1] || '';
+         cat = parts[2] || '';
+         worktype = 1;
+         department = 'FIELD';
+       } else {
+         // Shop trucking, mechanic, misc shop, office — no job code
+         job = ''; phase = ''; cat = '';
+         worktype = 2;
+       }
      } else {
        job = entry.projectNum || '';
        // Parse phase.cat from costCode "31.3105"
