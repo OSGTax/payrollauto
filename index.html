@@ -569,7 +569,6 @@ async function handleFile(file) {
      allText += lines.join('\n') + '\n';
    }
 
-   document.getElementById('parseStatus').textContent = 'Extracting time entries...';
    document.getElementById('progressFill').style.width = '100%';
 
    // Debug: show raw text in console and paste area for visibility
@@ -577,6 +576,12 @@ async function handleFile(file) {
    console.log(allText);
    document.getElementById('pasteArea').value = allText;
 
+   if (!allText.trim()) {
+     document.getElementById('parseStatus').innerHTML = '<span style="color:var(--red)">No text found in PDF. This usually means it was "Printed to PDF" instead of "Saved as PDF" from BusyBusy. <br>Go back to BusyBusy and use <b>Save As PDF</b> (not Print to PDF) to export the time cards.</span>';
+     return;
+   }
+
+   document.getElementById('parseStatus').textContent = 'Extracting time entries...';
    parseTimeEntries(allText);
 
  } catch (err) {
