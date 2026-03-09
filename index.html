@@ -397,6 +397,7 @@
        </thead>
        <tbody id="exportBody"></tbody>
      </table>
+     <p class="desc" style="margin-top:8px">Preview shows key fields. CSV download includes all 32 CE columns (class, department, unionloc, billat, rate, amount, des2, wcomp1/2, state, local, etc.) as empty values.</p>
    </div>
    <div class="actions">
      <button class="btn btn-green" onclick="downloadCSV()">⬇ Download CE Import CSV</button>
@@ -1054,47 +1055,59 @@ function recalculate() {
      const prevAccum = accumulated;
      accumulated += entry.hours;
 
+     // Build a CE row with all 32 fields in the correct import layout order
+     const makeCeRow = (payType, hours) => ({
+       emp: empId,
+       type: payType,                          // 1=Reg, 2=OT, 3=Double
+       otmult: payType >= 2 ? otMult : '1.0',  // 1.0 for regular, 1.5 for OT
+       class: '',                               // Employee work class
+       job,                                     // Job/project number
+       phase,                                   // Phase code
+       cat,                                     // Category code
+       department: '',                           // Department code
+       worktype,                                // 1=Job, 2=Shop, 3=Travel
+       unionloc: '',                             // Union local
+       billat: '',                               // Billing rate
+       hours,                                    // Hours worked
+       rate: '',                                 // Hourly rate
+       amount: '',                               // Dollar amount
+       date: entry.dateStr,                      // MM/DD/YYYY
+       des1,                                     // Description line 1 (30 char)
+       des2: '',                                 // Description line 2
+       wcomp1: '',                               // Workers comp code
+       wcomp2: '',                               // Secondary workers comp
+       state: '',                                // State
+       local: '',                                // Local tax authority
+       units: '',                                // Units completed
+       costtype: '',                             // Cost type
+       costcode: '',                             // Combined job.phase.cat (unused, we use separate fields)
+       equipnum: entry.equipment || '',          // Equipment code
+       equipcode: '',                            // Equipment cost/revenue code
+       equiporder: '',                           // Equipment work order
+       equiphours: '',                           // Equipment hours
+       equipdes: '',                             // Equipment description
+       account: '',                              // GL account
+       starttime: '',                            // Start time
+       endtime: ''                               // End time
+     });
+
      if (prevAccum >= threshold) {
        // All OT
-       ceRows.push({
-         emp: empId, type: 2, otmult: otMult,
-         job, phase, cat, worktype,
-         hours: roundHours(entry.hours),
-         date: entry.dateStr,
-         des1, equipnum: entry.equipment || ''
-       });
+       ceRows.push(makeCeRow(2, roundHours(entry.hours)));
      } else if (accumulated > threshold) {
        // Split: some reg, some OT
        const regPortion = roundHours(threshold - prevAccum);
        const otPortion = roundHours(entry.hours - regPortion);
 
        if (regPortion > 0) {
-         ceRows.push({
-           emp: empId, type: 1, otmult: '',
-           job, phase, cat, worktype,
-           hours: regPortion,
-           date: entry.dateStr,
-           des1, equipnum: entry.equipment || ''
-         });
+         ceRows.push(makeCeRow(1, regPortion));
        }
        if (otPortion > 0) {
-         ceRows.push({
-           emp: empId, type: 2, otmult: otMult,
-           job, phase, cat, worktype,
-           hours: otPortion,
-           date: entry.dateStr,
-           des1, equipnum: entry.equipment || ''
-         });
+         ceRows.push(makeCeRow(2, otPortion));
        }
      } else {
        // All regular
-       ceRows.push({
-         emp: empId, type: 1, otmult: '',
-         job, phase, cat, worktype,
-         hours: roundHours(entry.hours),
-         date: entry.dateStr,
-         des1, equipnum: entry.equipment || ''
-       });
+       ceRows.push(makeCeRow(1, roundHours(entry.hours)));
      }
    });
 
@@ -1148,13 +1161,26 @@ function downloadCSV(format) {
  const delim = format === 'tab' ? '\t' : ',';
  const ext = format === 'tab' ? 'txt' : 'csv';
 
- const headers = ['emp','type','otmult','job','phase','cat','worktype','hours','date','des1','equipnum'];
+ // Full CE Labor Distribution import layout - all 32 fields in correct order
+ const headers = [
+   'emp','type','otmult','class','job','phase','cat','department','worktype',
+   'unionloc','billat','hours','rate','amount','date','des1','des2',
+   'wcomp1','wcomp2','state','local','units','costtype','costcode',
+   'equipnum','equipcode','equiporder','equiphours','equipdes','account',
+   'starttime','endtime'
+ ];
 
  let csv = headers.join(delim) + '\n';
 
  state.ceRows.forEach(r => {
    const row = headers.map(h => {
-     let val = String(r[h] || '');
+     let val;
+     // Format numeric fields with proper decimal places for CE
+     if (h === 'hours' || h === 'equiphours') {
+       val = typeof r[h] === 'number' ? r[h].toFixed(2) : String(r[h] || '');
+     } else {
+       val = String(r[h] != null ? r[h] : '');
+     }
      // Quote if contains delimiter or quotes
      if (val.includes(delim) || val.includes('"') || val.includes('\n')) {
        val = '"' + val.replace(/"/g, '""') + '"';
