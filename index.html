@@ -4,7 +4,34 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BusyBusy → ComputerEase Payroll Converter</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+// Load pdf.js with CDN fallback chain (tracking protection blocks some CDNs)
+(function() {
+  var sources = [
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
+    'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+  ];
+  var workerSources = [
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
+    'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+  ];
+  window._pdfWorkerSources = workerSources;
+  function tryLoad(idx) {
+    if (idx >= sources.length) {
+      console.error('All pdf.js CDN sources blocked. PDF upload will not work - use paste instead.');
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = sources[idx];
+    s.onload = function() { window._pdfjsLoadedFrom = idx; };
+    s.onerror = function() { console.warn('pdf.js blocked from: ' + sources[idx]); tryLoad(idx + 1); };
+    document.head.appendChild(s);
+  }
+  tryLoad(0);
+})();
+</script>
 <style>
  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@400;500;600;700&display=swap');
  :root {
@@ -1315,7 +1342,9 @@ dropZone.addEventListener('drop', (e) => {
 
 // Initialize pdf.js worker
 if (typeof pdfjsLib !== 'undefined') {
- pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+ // Use the same CDN that successfully loaded pdf.js for the worker
+ var workerIdx = window._pdfjsLoadedFrom || 0;
+ pdfjsLib.GlobalWorkerOptions.workerSrc = (window._pdfWorkerSources || [])[workerIdx] || 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 }
 </script>
 </body>
