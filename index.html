@@ -459,7 +459,7 @@ let state = {
  entries: [],        // parsed BusyBusy entries
  shopCodes: [],      // unique shop codes found
  shopMappings: {},   // shop code → CE mapping (legacy)
- truckingTypes: {},  // entry index → { type: 'shop'|'small'|'job', jobCode: '' }
+ shopDesignations: {},  // entry index → { type: 'shop'|'small'|'job'|'smallengine', jobCode: '' }
  ceRows: [],         // final CE import rows
  fileName: ''
 };
@@ -1000,139 +1000,127 @@ function renderMappings() {
    return;
  }
  document.getElementById('noShopMsg').classList.add('hidden');
+ document.getElementById('shopSummary').innerHTML = '';
 
- // Summarize non-trucking shop entries
- const mechanicEntries = shopEntries.filter(e => e.shopCode === 'Mechanic');
- const miscEntries = shopEntries.filter(e => e.shopCode === 'Miscellaneous Shop');
- const officeEntries = shopEntries.filter(e => e.shopCode === 'Office');
- const truckingEntries = shopEntries.filter(e => e.shopCode === 'AJK Trucking');
- const otherEntries = shopEntries.filter(e =>
-   e.shopCode !== 'Mechanic' && e.shopCode !== 'Miscellaneous Shop' &&
-   e.shopCode !== 'Office' && e.shopCode !== 'AJK Trucking'
- );
-
- let summaryHtml = '';
- const summaryItems = [];
- if (mechanicEntries.length > 0) {
-   const hrs = mechanicEntries.reduce((s, e) => s + e.hours, 0);
-   summaryItems.push(`<strong>Mechanic:</strong> ${mechanicEntries.length} entries (${roundHours(hrs)} hrs) — no job code`);
- }
- if (miscEntries.length > 0) {
-   const hrs = miscEntries.reduce((s, e) => s + e.hours, 0);
-   summaryItems.push(`<strong>Misc Shop:</strong> ${miscEntries.length} entries (${roundHours(hrs)} hrs) — no job code`);
- }
- if (officeEntries.length > 0) {
-   const hrs = officeEntries.reduce((s, e) => s + e.hours, 0);
-   summaryItems.push(`<strong>Office:</strong> ${officeEntries.length} entries (${roundHours(hrs)} hrs) — no job code`);
- }
- if (otherEntries.length > 0) {
-   const hrs = otherEntries.reduce((s, e) => s + e.hours, 0);
-   const codes = [...new Set(otherEntries.map(e => e.shopCode))].join(', ');
-   summaryItems.push(`<strong>Other (${codes}):</strong> ${otherEntries.length} entries (${roundHours(hrs)} hrs) — no job code`);
- }
-
- if (summaryItems.length > 0) {
-   summaryHtml = `<div style="margin-bottom:16px;padding:12px;background:var(--bg2);border-radius:8px">
-     <div style="font-weight:600;margin-bottom:6px">Non-Trucking Shop Entries</div>
-     ${summaryItems.map(s => `<div style="font-size:13px;margin:2px 0">${s}</div>`).join('')}
-   </div>`;
- }
- document.getElementById('shopSummary').innerHTML = summaryHtml;
-
- // Trucking entries — each needs categorization
- if (truckingEntries.length === 0) {
-   document.getElementById('truckingContainer').innerHTML = '';
-   return;
- }
-
- let tHtml = `
-   <div style="font-weight:600;margin-bottom:8px">AJK Trucking Entries — Assign Type</div>
-   <div class="mapping-row header" style="grid-template-columns: 1fr 1fr 80px 1fr 1fr">
+ let html = `
+   <div style="font-weight:600;margin-bottom:8px">Shop Entries</div>
+   <div class="mapping-row header" style="grid-template-columns: 1fr 1fr 80px 1fr 1fr 1fr">
      <div>Employee</div>
      <div>Date</div>
      <div>Hours</div>
-     <div>Type</div>
+     <div>Shop Type</div>
+     <div>Designation</div>
      <div>Job Code</div>
    </div>
  `;
 
- truckingEntries.forEach(entry => {
+ shopEntries.forEach(entry => {
    const idx = state.entries.indexOf(entry);
-   const td = state.truckingTypes[idx] || { type: 'shop' };
-   tHtml += `
-     <div class="mapping-row" style="grid-template-columns: 1fr 1fr 80px 1fr 1fr">
+   const sd = state.shopDesignations[idx] || {};
+   const isTrucking = entry.shopCode === 'AJK Trucking';
+   const isMechanic = entry.shopCode === 'Mechanic';
+   const hasEquipment = !!entry.equipment;
+
+   // Determine available designation options based on shop type
+   let designationHtml;
+   if (isTrucking) {
+     const type = sd.type || 'shop';
+     designationHtml = `
+       <select data-idx="${idx}" data-field="designation" style="width:100%">
+         <option value="shop" ${type === 'shop' ? 'selected' : ''}>Shop Trucking</option>
+         <option value="small" ${type === 'small' ? 'selected' : ''}>Small Trucking Job</option>
+         <option value="job" ${type === 'job' ? 'selected' : ''}>Job Trucking</option>
+       </select>`;
+   } else if (isMechanic && !hasEquipment) {
+     designationHtml = `<span style="color:var(--orange);font-size:12px">Small Engine Work</span>`;
+     if (!sd.type) {
+       if (!state.shopDesignations[idx]) state.shopDesignations[idx] = {};
+       state.shopDesignations[idx].type = 'smallengine';
+     }
+   } else if (isMechanic && hasEquipment) {
+     designationHtml = `<span style="font-size:12px">Mechanic — ${entry.equipment}</span>`;
+   } else {
+     designationHtml = `<span style="font-size:12px;color:var(--text2)">${entry.shopCode || 'Shop'}</span>`;
+   }
+
+   // Job code column
+   let jobCodeHtml;
+   if (isTrucking) {
+     const type = sd.type || 'shop';
+     const disabled = type !== 'job';
+     const placeholder = type === 'small' ? '26-000.03.1010' : (type === 'job' ? 'Enter job code' : 'N/A');
+     jobCodeHtml = `<input type="text" data-idx="${idx}" data-field="jobcode" value="${sd.jobCode || ''}"
+       placeholder="${placeholder}" ${disabled ? 'disabled style="opacity:0.4"' : ''}>`;
+   } else {
+     jobCodeHtml = `<span class="mono" style="font-size:12px;color:var(--text2)">—</span>`;
+   }
+
+   html += `
+     <div class="mapping-row" style="grid-template-columns: 1fr 1fr 80px 1fr 1fr 1fr">
        <div>${entry.employee}</div>
        <div class="mono">${entry.dateStr}</div>
        <div class="mono" style="text-align:right">${entry.hours.toFixed(2)}</div>
-       <div>
-         <select data-idx="${idx}" data-field="trucktype" style="width:100%">
-           <option value="shop" ${td.type === 'shop' ? 'selected' : ''}>Shop Trucking</option>
-           <option value="small" ${td.type === 'small' ? 'selected' : ''}>Small Trucking Job</option>
-           <option value="job" ${td.type === 'job' ? 'selected' : ''}>Job Trucking</option>
-         </select>
-       </div>
-       <div>
-         <input type="text" data-idx="${idx}" data-field="truckjob" value="${td.jobCode || ''}"
-           placeholder="${td.type === 'small' ? '26-000.03.1010' : 'Enter job code'}"
-           ${td.type === 'shop' ? 'disabled style="opacity:0.4"' : ''}
-           ${td.type === 'small' ? 'disabled style="opacity:0.4"' : ''}>
-       </div>
+       <div><span class="tag tag-shop" style="font-size:11px">${entry.shopCode || 'Shop'}</span></div>
+       <div>${designationHtml}</div>
+       <div>${jobCodeHtml}</div>
      </div>
    `;
  });
 
- document.getElementById('truckingContainer').innerHTML = tHtml;
+ document.getElementById('truckingContainer').innerHTML = html;
 
- // Event listeners for trucking selects
- document.querySelectorAll('#truckingContainer select[data-field="trucktype"]').forEach(sel => {
+ // Event listeners for trucking designation selects
+ document.querySelectorAll('#truckingContainer select[data-field="designation"]').forEach(sel => {
    sel.addEventListener('change', () => {
      const idx = sel.dataset.idx;
-     if (!state.truckingTypes[idx]) state.truckingTypes[idx] = {};
-     state.truckingTypes[idx].type = sel.value;
+     if (!state.shopDesignations[idx]) state.shopDesignations[idx] = {};
+     state.shopDesignations[idx].type = sel.value;
      const jobInput = document.querySelector(`#truckingContainer input[data-idx="${idx}"]`);
-     if (sel.value === 'shop') {
-       jobInput.disabled = true;
-       jobInput.style.opacity = '0.4';
-       jobInput.value = '';
-       jobInput.placeholder = 'N/A';
-     } else if (sel.value === 'small') {
-       jobInput.disabled = true;
-       jobInput.style.opacity = '0.4';
-       jobInput.value = '';
-       jobInput.placeholder = '26-000.03.1010';
-     } else {
-       jobInput.disabled = false;
-       jobInput.style.opacity = '1';
-       jobInput.placeholder = 'Enter job code';
+     if (jobInput) {
+       if (sel.value === 'shop') {
+         jobInput.disabled = true;
+         jobInput.style.opacity = '0.4';
+         jobInput.value = '';
+         jobInput.placeholder = 'N/A';
+       } else if (sel.value === 'small') {
+         jobInput.disabled = true;
+         jobInput.style.opacity = '0.4';
+         jobInput.value = '';
+         jobInput.placeholder = '26-000.03.1010';
+       } else {
+         jobInput.disabled = false;
+         jobInput.style.opacity = '1';
+         jobInput.placeholder = 'Enter job code';
+       }
      }
    });
  });
 
- document.querySelectorAll('#truckingContainer input[data-field="truckjob"]').forEach(inp => {
+ document.querySelectorAll('#truckingContainer input[data-field="jobcode"]').forEach(inp => {
    inp.addEventListener('change', () => {
      const idx = inp.dataset.idx;
-     if (!state.truckingTypes[idx]) state.truckingTypes[idx] = {};
-     state.truckingTypes[idx].jobCode = inp.value;
+     if (!state.shopDesignations[idx]) state.shopDesignations[idx] = {};
+     state.shopDesignations[idx].jobCode = inp.value;
    });
  });
 }
 
 function saveMappings() {
- // Collect trucking values from inputs
- document.querySelectorAll('#truckingContainer select[data-field="trucktype"]').forEach(sel => {
+ // Collect designation values from inputs
+ document.querySelectorAll('#truckingContainer select[data-field="designation"]').forEach(sel => {
    const idx = sel.dataset.idx;
-   if (!state.truckingTypes[idx]) state.truckingTypes[idx] = {};
-   state.truckingTypes[idx].type = sel.value;
+   if (!state.shopDesignations[idx]) state.shopDesignations[idx] = {};
+   state.shopDesignations[idx].type = sel.value;
  });
- document.querySelectorAll('#truckingContainer input[data-field="truckjob"]').forEach(inp => {
+ document.querySelectorAll('#truckingContainer input[data-field="jobcode"]').forEach(inp => {
    const idx = inp.dataset.idx;
-   if (!state.truckingTypes[idx]) state.truckingTypes[idx] = {};
-   state.truckingTypes[idx].jobCode = inp.value;
+   if (!state.shopDesignations[idx]) state.shopDesignations[idx] = {};
+   state.shopDesignations[idx].jobCode = inp.value;
  });
 }
 
 function loadMappings() {
- // No persistent mappings needed for per-upload trucking designations
+ // No persistent mappings needed for per-upload designations
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1182,18 +1170,19 @@ function recalculate() {
        }
        department = entry.costCodeDesc && entry.costCodeDesc.match(/office|admin/i) ? 'ADMIN' : 'SHOP';
 
-       // AJK Trucking: use trucking type designation
+       // Look up per-entry designation
+       const sd = state.shopDesignations[entry._origIdx] || {};
        const isTrucking = entry.shopCode === 'AJK Trucking';
-       const td = isTrucking ? (state.truckingTypes[entry._origIdx] || { type: 'shop' }) : null;
+       const isMechanic = entry.shopCode === 'Mechanic';
 
-       if (isTrucking && td.type === 'small') {
+       if (isTrucking && sd.type === 'small') {
          // Small trucking job: fixed code 26-000.03.1010
          job = '26-000'; phase = '03'; cat = '1010';
          worktype = 1;
          department = 'FIELD';
-       } else if (isTrucking && td.type === 'job') {
+       } else if (isTrucking && sd.type === 'job') {
          // Job trucking: user-assigned code
-         const parts = (td.jobCode || '').split('.');
+         const parts = (sd.jobCode || '').split('.');
          job = parts[0] || '';
          phase = parts[1] || '';
          cat = parts[2] || '';
@@ -1203,6 +1192,11 @@ function recalculate() {
          // Shop trucking, mechanic, misc shop, office — no job code
          job = ''; phase = ''; cat = '';
          worktype = 2;
+       }
+
+       // Mechanic with no equipment → Small Engine Work description
+       if (isMechanic && !entry.equipment) {
+         des1 = 'Small Engine Work';
        }
      } else {
        job = entry.projectNum || '';
