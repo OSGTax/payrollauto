@@ -538,189 +538,188 @@ function parseTimeEntries(rawText) {
  const yearMatch = rawText.match(/\b(202\d)\b/);
  if (yearMatch) currentYear = parseInt(yearMatch[1]);
 
- // Normalize text: collapse form feeds, page breaks, extra whitespace
- const cleanText = rawText
+ // Normalize and split into non-empty trimmed lines
+ const allLines = rawText
    .replace(/---PAGE_BREAK---/g, '\n')
    .replace(/\f/g, '\n')
-   .replace(/\r\n/g, '\n');
-
- const allLines = cleanText.split('\n');
+   .replace(/\r\n/g, '\n')
+   .split('\n')
+   .map(l => l.trim())
+   .filter(l => l);
 
  let currentEmployee = null;
  let currentEmpId = null;
  let currentDate = null;
+ let i = 0;
 
- // Pre-scan: find all employee IDs and names
- // BusyBusy format puts the name on one line, then "Emp. ID:" either:
- // A) on same line as ID: "Emp. ID: HUNTERCH Start: Sun, Mar 1, 2026" (pdf.js grouped)
- // B) on separate lines: "Emp. ID:\nGroup:\nHUNTERCH\nTim's Crew" (copy-paste / raw)
- // C) on same line but no ID: "Emp. ID:" (raw extraction)
- // Build lookup of all uppercase IDs that appear near "Emp. ID:" lines
- const empIdPositions = []; // [{line, name, id}]
+ while (i < allLines.length) {
+   const line = allLines[i];
 
- for (let i = 0; i < allLines.length; i++) {
-   const line = allLines[i].trim();
-
-   // Pattern A: "Emp. ID: HUNTERCH" on same line
-   let m = line.match(/Emp\.?\s*ID:\s+([A-Z][A-Z0-9]+)/i);
-   if (m) {
-     const id = m[1].toUpperCase();
-     // Look back for name
-     let name = 'Unknown';
-     for (let b = i - 1; b >= Math.max(0, i - 3); b--) {
-       const prev = allLines[b].trim();
-       if (prev.match(/^[A-Z][a-z]+\s+[A-Z][a-z]+/) && !prev.match(/^(AJK|Generated|Provided|Date|Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i)) {
-         name = prev.replace(/\s{2,}.*/, '').trim();
-         break;
-       }
-     }
-     empIdPositions.push({line: i, name, id});
-     continue;
-   }
-
-   // Pattern B/C: "Emp. ID:" alone, ID is nearby (within 4 lines)
-   if (line.match(/^Emp\.?\s*ID:$/i) || line.match(/^Emp\.?\s*ID:\s*$/i)) {
+   // ── Employee detection ──
+   // "Emp. ID:" with ID on same line or within next few lines
+   if (line.match(/^Emp\.?\s*ID:/i)) {
      let id = null;
-     // Search forward for the ID (an all-caps word, at least 3 chars)
-     for (let f = i + 1; f <= Math.min(allLines.length - 1, i + 4); f++) {
-       const fwd = allLines[f].trim();
-       if (fwd.match(/^[A-Z][A-Z0-9]{2,}$/)) {
-         id = fwd;
-         break;
-       }
-     }
-
-     if (id) {
-       let name = 'Unknown';
-       for (let b = i - 1; b >= Math.max(0, i - 3); b--) {
-         const prev = allLines[b].trim();
-         if (prev.match(/^[A-Z][a-z]+\s+[A-Z][a-z]+/) && !prev.match(/^(AJK|Generated|Provided|Date|Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i)) {
-           name = prev.replace(/\s{2,}.*/, '').trim();
+     const inlineId = line.match(/Emp\.?\s*ID:\s+([A-Z][A-Z0-9]+)/i);
+     if (inlineId) {
+       id = inlineId[1].toUpperCase();
+     } else {
+       // ID is on a nearby line (skip "Group:" etc)
+       for (let f = 1; f <= 4 && i + f < allLines.length; f++) {
+         if (allLines[i + f].match(/^[A-Z][A-Z0-9]{2,}$/)) {
+           id = allLines[i + f];
            break;
          }
        }
-       empIdPositions.push({line: i, name, id});
      }
-   }
- }
-
- console.log('Found employees:', empIdPositions);
-
- // Now process line by line
- let empIdx = 0; // pointer into empIdPositions
-
- for (let i = 0; i < allLines.length; i++) {
-   const line = allLines[i].trim();
-   if (!line) continue;
-
-   // Check if we've reached a new employee
-   if (empIdx < empIdPositions.length && i >= empIdPositions[empIdx].line) {
-     currentEmployee = empIdPositions[empIdx].name;
-     currentEmpId = empIdPositions[empIdx].id;
-     currentDate = null; // reset date for new employee
-     empIdx++;
-     // Skip ahead if there's another emp starting on a later line
-     while (empIdx < empIdPositions.length && empIdPositions[empIdx].line <= i) {
-       empIdx++;
+     if (id) {
+       currentEmpId = id;
+       // Look backward for employee name
+       currentEmployee = 'Unknown';
+       for (let b = i - 1; b >= Math.max(0, i - 5); b--) {
+         const prev = allLines[b];
+         if (prev.match(/^[A-Z][a-z]+\s+[A-Z][a-z]+/) &&
+             !prev.match(/^(AJK|Generated|Provided|Date|Mon|Tue|Wed|Thu|Fri|Sat|Sun|Cost|Project|Total)/i)) {
+           currentEmployee = prev;
+           break;
+         }
+       }
+       currentDate = null;
      }
+     i++; continue;
    }
 
-   // Skip header/footer lines
-   if (line.match(/^(Date\s+Start|Generated\s+By|Provided\s+by|AJK\s+Site|Michael\s+Frary|\d+:\d+\s*(AM|PM)\s+\w+,|BusyBusy)/i)) continue;
-   if (line.match(/^(Emp\.?\s*ID|Group:|Start:|End:|Tim's\s+Crew)/i)) continue;
-   if (line.match(/^[A-Z][A-Z0-9]{2,}$/) && !currentDate) continue; // standalone emp ID
-   if (line.match(/^(Sun|Sat),\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d+,\s*\d{4}/i)) continue; // Start/End date
+   // ── Skip known non-data lines ──
+   if (line.match(/^(Date\s+Start|Generated\s+By|Provided\s+by|AJK\s+Site|BusyBusy)/i) ||
+       line.match(/^(Group:|Start:|End:|Tim's\s+Crew)/i) ||
+       line.match(/^(Activity|Type|Stop|Breaks)$/i) ||
+       line.match(/^\d+:\d+\s*(AM|PM)\s+\w+,/i) ||  // "9:37 AM Mon, Mar 9, 2026"
+       line.match(/^Total\s+\d/i) ||
+       line.match(/^[A-Z][a-z]+\s+[A-Z][a-z]+$/) && !currentDate && line !== currentEmployee) {
+     i++; continue;
+   }
+   // Skip standalone emp IDs
+   if (line.match(/^[A-Z][A-Z0-9]{2,}$/) && line === currentEmpId) { i++; continue; }
+   // Skip Start/End full date lines: "Sun, Mar 1, 2026"
+   if (line.match(/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat),\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d+,\s*\d{4}/i)) {
+     i++; continue;
+   }
 
-   // Detect date line: "Mon, Mar 2" with optional daily total
+   // ── Date detection: "Mon, Mar 2" or "Mon, Mar 2 08:55" ──
    const dateMatch = line.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d+)/i);
    if (dateMatch) {
      const mon = months[dateMatch[2].charAt(0).toUpperCase() + dateMatch[2].slice(1).toLowerCase()];
      if (mon !== undefined) {
        currentDate = new Date(currentYear, mon, parseInt(dateMatch[3]));
      }
+     i++;
+     // Skip daily total on next line (bare "HH:MM" without AM/PM)
+     if (i < allLines.length && allLines[i].match(/^\d{2,3}:\d{2}$/) && !allLines[i].match(/[AP]M/i)) {
+       i++;
+     }
      continue;
    }
 
-   // Detect time entry: "6:30 AM 3:25 PM 00:00 Project: ..."
-   // or just "6:30 AM 3:25 PM 00:00" with Project on next line
-   const timeMatch = line.match(/^(\d{1,2}:\d{2}\s*[AP]M)\s+(\d{1,2}:\d{2}\s*[AP]M)\s+(\d{2}:\d{2})(.*)/i);
+   // ── Time entry detection ──
+   // Format A (pdf.js grouped): "6:30 AM 3:25 PM 00:00"
+   // Format B (line-by-line):   "6:30 AM" alone on a line
+   const groupedTime = line.match(/^(\d{1,2}:\d{2}\s*[AP]M)\s+(\d{1,2}:\d{2}\s*[AP]M)\s+(\d{2}:\d{2})/i);
+   const singleTime = line.match(/^(\d{1,2}:\d{2}\s*[AP]M)$/i);
 
-   if (timeMatch && currentEmpId) {
-     let project = null, projectNum = null, costCode = null, costCodeDesc = null;
+   if ((groupedTime || singleTime) && currentEmpId && currentDate) {
+     if (groupedTime) {
+       i++; // move past the grouped time line
+     } else {
+       // Line-by-line: start time, then stop time, then break duration
+       i++; // past start time
+       if (i < allLines.length && allLines[i].match(/^\d{1,2}:\d{2}\s*[AP]M$/i)) i++; // past stop time
+       if (i < allLines.length && allLines[i].match(/^\d{2}:\d{2}$/)) i++; // past break
+     }
+
+     // ── Collect entry details (Project, Cost Code, Equipment, etc.) ──
+     let project = null, projectNum = null, costCodeMultiline = '';
      let equipment = null, description = null, entryHours = null;
-
-     const remainder = timeMatch[4].trim();
-
-     // Check if "Project:" is on the same line
-     const inlineProj = remainder.match(/Project:\s*(.+)/i);
-     if (inlineProj) project = inlineProj[1].trim();
-
-     // Look ahead for entry details
-     let j = i + 1;
-     let linesCollected = [];
-     while (j < allLines.length && j <= i + 15) {
-       const nl = allLines[j].trim();
-       if (!nl) { j++; continue; }
-
-       // Stop conditions
-       if (nl.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d+/i)) break;
-       if (nl.match(/^Emp\.?\s*ID/i)) break;
-       if (nl.match(/^Total\s+\d/i)) break;
-       if (nl.match(/^Generated\s+By/i)) break;
-       if (nl.match(/^[A-Z][a-z]+\s+[A-Z][a-z]+\s*$/) && !nl.match(/^(Cost|Project)/i)) {
-         // Possible new employee name - only break if next lines confirm
-         if (j + 2 < allLines.length && allLines[j+1].trim().match(/^Emp\.?\s*ID/i)) break;
-       }
-       // New time entry (another start/stop pair)
-       if (nl.match(/^\d{1,2}:\d{2}\s*[AP]M\s+\d{1,2}:\d{2}\s*[AP]M/i)) break;
-
-       linesCollected.push(nl);
-
-       // If we found "Entry HH:MM", we're done with this entry
-       if (nl.match(/^Entry\s+\d+:\d+/i) || nl.match(/Entry\s+\d+:\d+\s*$/i)) break;
-
-       j++;
-     }
-
-     // Parse collected lines
-     let costCodeMultiline = '';
      let collectingCostCode = false;
+     let lastLabel = null; // tracks a label whose value is on the next line
 
-     for (let k = 0; k < linesCollected.length; k++) {
-       const cl = linesCollected[k];
+     while (i < allLines.length) {
+       const cl = allLines[i];
 
-       const projMatch = cl.match(/^Project:\s*(.+)/i);
-       const projNumMatch = cl.match(/^Project\s*#:\s*(.+)/i);
-       const costMatch = cl.match(/^Cost\s*Code:\s*(.+)/i);
-       const equipMatch = cl.match(/^Equipment:\s*(.+)/i);
-       const descMatch = cl.match(/^Description:\s*(.+)/i);
-       const entryMatch = cl.match(/Entry\s+(\d+:\d+)/i);
-
-       if (projMatch) {
-         if (!project) project = projMatch[1].trim();
-         collectingCostCode = false;
-       } else if (projNumMatch) {
-         projectNum = projNumMatch[1].trim();
-         collectingCostCode = false;
-       } else if (costMatch) {
-         costCodeMultiline = costMatch[1].trim();
-         collectingCostCode = true;
-       } else if (equipMatch) {
-         equipment = equipMatch[1].trim();
-         collectingCostCode = false;
-       } else if (descMatch) {
-         description = descMatch[1].trim();
-         collectingCostCode = false;
-       } else if (entryMatch) {
-         entryHours = hhmmToDecimal(entryMatch[1]);
-         collectingCostCode = false;
-       } else if (collectingCostCode && !cl.match(/^(Project|Cost|Equipment|Description|Entry)/i)) {
-         // Continuation of cost code text (e.g., "ELECTRICAL" after "TRENCH/BACKFILL FOR")
-         costCodeMultiline += ' ' + cl;
+       // Stop conditions: new date, new time entry, new employee, Total, end of section
+       if (cl.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d+/i)) break;
+       if (cl.match(/^\d{1,2}:\d{2}\s*[AP]M/i)) break;
+       if (cl.match(/^Emp\.?\s*ID/i)) break;
+       if (cl.match(/^Total\s+\d/i)) break;
+       if (cl.match(/^Generated\s+By/i)) break;
+       // New employee name: "Firstname Lastname" followed by "Emp. ID:"
+       if (cl.match(/^[A-Z][a-z]+\s+[A-Z][a-z]+$/) && !cl.match(/^(Cost|Project)/i)) {
+         if (i + 1 < allLines.length && allLines[i + 1].match(/^Emp\.?\s*ID/i)) break;
        }
+
+       // ── Try matching labels (with or without inline value) ──
+       let m, matched = false;
+
+       if ((m = cl.match(/^Project:\s*(.*)/i))) {
+         collectingCostCode = false; lastLabel = null;
+         if (m[1].trim()) { project = m[1].trim(); } else { lastLabel = 'project'; }
+         matched = true;
+       } else if ((m = cl.match(/^Project\s*#:\s*(.*)/i))) {
+         collectingCostCode = false; lastLabel = null;
+         if (m[1].trim()) { projectNum = m[1].trim(); } else { lastLabel = 'projectNum'; }
+         matched = true;
+       } else if ((m = cl.match(/^Cost\s*Code:\s*(.*)/i))) {
+         collectingCostCode = false; lastLabel = null;
+         if (m[1].trim()) { costCodeMultiline = m[1].trim(); collectingCostCode = true; }
+         else { lastLabel = 'costCode'; }
+         matched = true;
+       } else if ((m = cl.match(/^Equipment:\s*(.*)/i))) {
+         collectingCostCode = false; lastLabel = null;
+         if (m[1].trim()) { equipment = m[1].trim(); } else { lastLabel = 'equipment'; }
+         matched = true;
+       } else if ((m = cl.match(/^Description:\s*(.*)/i))) {
+         collectingCostCode = false; lastLabel = null;
+         if (m[1].trim()) { description = m[1].trim(); } else { lastLabel = 'description'; }
+         matched = true;
+       } else if ((m = cl.match(/^Entry\s+(\d+:\d+)/i))) {
+         // "Entry 08:55" on one line
+         entryHours = hhmmToDecimal(m[1]);
+         i++; break;
+       } else if (cl.match(/^Entry$/i)) {
+         // "Entry" alone, hours on next line
+         i++;
+         if (i < allLines.length && allLines[i].match(/^\d{2,3}:\d{2}$/)) {
+           entryHours = hhmmToDecimal(allLines[i]);
+           i++;
+         }
+         break;
+       }
+
+       if (matched) { i++; continue; }
+
+       // ── Value for a label that was on the previous line ──
+       if (lastLabel) {
+         switch (lastLabel) {
+           case 'project': project = cl; break;
+           case 'projectNum': projectNum = cl; break;
+           case 'costCode': costCodeMultiline = cl; collectingCostCode = true; break;
+           case 'equipment': equipment = cl; break;
+           case 'description': description = cl; break;
+         }
+         lastLabel = null;
+         i++; continue;
+       }
+
+       // ── Cost code continuation (multiline descriptions) ──
+       if (collectingCostCode) {
+         costCodeMultiline += ' ' + cl;
+         i++; continue;
+       }
+
+       // Unknown line, skip
+       i++;
      }
 
-     // Parse the cost code
+     // ── Parse cost code into numeric code + description ──
+     let costCode = null, costCodeDesc = null;
      if (costCodeMultiline) {
        const fullCC = costCodeMultiline.trim();
        const numCC = fullCC.match(/^(\d+\.\d+)\s*(.*)/);
@@ -728,14 +727,17 @@ function parseTimeEntries(rawText) {
          costCode = numCC[1];
          costCodeDesc = numCC[2].trim() || '';
        } else {
-         costCode = null;
          costCodeDesc = fullCC;
        }
      }
 
-     // Build entry
-     if (currentDate && entryHours > 0) {
-       const isShop = !costCode && (project === 'Shop' || (projectNum && projectNum.match(/General\s*Shop/i)) || (!projectNum && !costCode));
+     // ── Build entry ──
+     if (entryHours > 0) {
+       const isShop = !costCode && (
+         project === 'Shop' ||
+         (projectNum && projectNum.match(/General\s*Shop/i)) ||
+         (!projectNum && !costCode)
+       );
 
        let shopCode = null;
        if (isShop && costCodeDesc) {
@@ -747,23 +749,15 @@ function parseTimeEntries(rawText) {
          ];
          for (const pat of shopPatterns) {
            const sm = costCodeDesc.match(pat);
-           if (sm) {
-             shopCode = sm[1].trim();
-             break;
-           }
+           if (sm) { shopCode = sm[1].trim(); break; }
          }
          if (!shopCode) {
-           // Generic: take first 1-2 words before a known description word
            const parts = costCodeDesc.split(/\s+/);
-           if (parts.length >= 2) {
-             // Check if second word is capitalized (part of name) or lowercase (start of description)
-             if (parts[1] && parts[1][0] === parts[1][0].toUpperCase() && !parts[1].match(/^(Small|Moving|Equipment|Office|job)/i)) {
-               shopCode = parts.slice(0, 2).join(' ');
-             } else {
-               shopCode = parts[0];
-             }
+           if (parts.length >= 2 && parts[1] && parts[1][0] === parts[1][0].toUpperCase() &&
+               !parts[1].match(/^(Small|Moving|Equipment|Office|job)/i)) {
+             shopCode = parts.slice(0, 2).join(' ');
            } else {
-             shopCode = costCodeDesc;
+             shopCode = parts[0] || costCodeDesc;
            }
          }
        }
@@ -785,9 +779,10 @@ function parseTimeEntries(rawText) {
        });
      }
 
-     i = j - 1; // -1 because the for loop will i++
-     continue;
+     continue; // i already advanced past this entry
    }
+
+   i++;
  }
 
  state.entries = entries;
