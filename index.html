@@ -377,27 +377,26 @@
 
  <div class="card">
    <h2>CE Import Preview</h2>
-   <p class="desc">This is what will be in the CSV file. Configure your CE Labor Distribution import layout to match these columns.</p>
+   <p class="desc">Review and adjust fields before export. Dropdowns let you set department and class per row. CSV includes all 32 CE columns.</p>
    <div class="scroll-table">
      <table>
        <thead>
          <tr>
            <th>emp</th>
+           <th>date</th>
+           <th>department</th>
+           <th>class</th>
            <th>type</th>
-           <th>otmult</th>
            <th>job</th>
-           <th>phase</th>
-           <th>cat</th>
+           <th>phase.cat</th>
            <th>worktype</th>
            <th>hours</th>
-           <th>date</th>
            <th>des1</th>
            <th>equipnum</th>
          </tr>
        </thead>
        <tbody id="exportBody"></tbody>
      </table>
-     <p class="desc" style="margin-top:8px">Preview shows key fields. CSV download includes all 32 CE columns (class, department, unionloc, billat, rate, amount, des2, wcomp1/2, state, local, etc.) as empty values.</p>
    </div>
    <div class="actions">
      <button class="btn btn-green" onclick="downloadCSV()">⬇ Download CE Import CSV</button>
@@ -574,7 +573,6 @@ function parseTimeEntries(rawText) {
      }
      if (id) {
        currentEmpId = id;
-       console.log('FOUND EMP ID:', id);
        // Look backward for employee name
        currentEmployee = 'Unknown';
        for (let b = i - 1; b >= Math.max(0, i - 5); b--) {
@@ -612,7 +610,6 @@ function parseTimeEntries(rawText) {
      const mon = months[dateMatch[2].charAt(0).toUpperCase() + dateMatch[2].slice(1).toLowerCase()];
      if (mon !== undefined) {
        currentDate = new Date(currentYear, mon, parseInt(dateMatch[3]));
-       console.log('FOUND DATE:', currentDate, 'empId:', currentEmpId);
      }
      i++;
      // Skip daily total on next line (bare "HH:MM" without AM/PM)
@@ -628,7 +625,6 @@ function parseTimeEntries(rawText) {
    const groupedTime = line.match(/^(\d{1,2}:\d{2}\s*[AP]M)\s+(\d{1,2}:\d{2}\s*[AP]M)\s+(\d{2}:\d{2})/i);
    const singleTime = line.match(/^(\d{1,2}:\d{2}\s*[AP]M)$/i);
 
-   console.log('LINE[' + i + ']:', JSON.stringify(line.substring(0, 80)), 'groupedTime:', !!groupedTime, 'singleTime:', !!singleTime, 'empId:', currentEmpId, 'date:', !!currentDate);
    if ((groupedTime || singleTime) && currentEmpId && currentDate) {
      let inlineRemainder = '';
      if (groupedTime) {
@@ -651,12 +647,10 @@ function parseTimeEntries(rawText) {
      // Parse inline data from PDF grouped time lines
      // e.g. "6:30 AM 3:25 PM 00:00 Project: Shop Entry 08:55"
      if (inlineRemainder) {
-       console.log('INLINE REMAINDER:', JSON.stringify(inlineRemainder));
        const entryM = inlineRemainder.match(/Entry\s+(\d+:\d+)/i);
        if (entryM) entryHours = hhmmToDecimal(entryM[1]);
        const projM = inlineRemainder.match(/Project:\s*(.*?)(?:\s+Entry\s+\d+:\d+)/i);
        if (projM) project = projM[1].trim();
-       console.log('INLINE PARSED: project=', project, 'entryHours=', entryHours);
      }
 
      while (i < allLines.length) {
@@ -750,7 +744,6 @@ function parseTimeEntries(rawText) {
      }
 
      // ── Build entry ──
-     console.log('BUILD ENTRY: hours=', entryHours, 'project=', project, 'projectNum=', projectNum, 'costCode=', costCode);
      if (entryHours > 0) {
        const isShop = !costCode && (
          project === 'Shop' ||
@@ -1034,7 +1027,7 @@ function recalculate() {
      const mapping = entry.isShop ? (state.shopMappings[entry.shopCode] || state.shopMappings[entry.costCodeDesc] || {}) : {};
 
      // Determine CE fields
-     let job, phase, cat, worktype, des1;
+     let job, phase, cat, worktype, des1, department, empClass;
 
      if (entry.isShop) {
        job = mapping.job || '';
@@ -1042,29 +1035,42 @@ function recalculate() {
        cat = mapping.cat || '';
        worktype = parseInt(mapping.worktype) || 2;
        des1 = (mapping.des1 || entry.shopCode || entry.costCodeDesc || '').substring(0, 30);
+       // Shop entries: equipment name goes to des1 for mechanic work
+       if (entry.equipment && entry.costCodeDesc && entry.costCodeDesc.match(/mechanic/i)) {
+         des1 = entry.equipment.substring(0, 30);
+       }
+       department = entry.costCodeDesc && entry.costCodeDesc.match(/office|admin/i) ? 'ADMIN' : 'SHOP';
+       empClass = entry.costCodeDesc && entry.costCodeDesc.match(/mechanic/i) ? 'MECHANIC' : '';
+       // Shop & Admin: no cost code in CE
+       job = ''; phase = ''; cat = '';
      } else {
        job = entry.projectNum || '';
        // Parse phase.cat from costCode "31.3105"
-       const ccParts = entry.costCode.split('.');
+       const ccParts = (entry.costCode || '').split('.');
        phase = ccParts[0] || '';
        cat = ccParts[1] || '';
        worktype = 1;
        des1 = (entry.costCodeDesc || entry.description || '').substring(0, 30);
+       department = 'FIELD';
+       // Equipment + job cost code = operating equipment = OPER A
+       empClass = entry.equipment ? 'OPER A' : '';
      }
 
      const prevAccum = accumulated;
      accumulated += entry.hours;
 
      // Build a CE row with all 32 fields in the correct import layout order
+     const rowIdx = ceRows.length; // for editable dropdown data attributes
      const makeCeRow = (payType, hours) => ({
+       _idx: ceRows.length,                      // internal index for dropdown binding
        emp: empId,
        type: payType,                          // 1=Reg, 2=OT, 3=Double
        otmult: payType >= 2 ? otMult : '1.0',  // 1.0 for regular, 1.5 for OT
-       class: '',                               // Employee work class
+       class: empClass,                         // Employee work class
        job,                                     // Job/project number
        phase,                                   // Phase code
        cat,                                     // Category code
-       department: '',                           // Department code
+       department,                              // FIELD, SHOP, or ADMIN
        worktype,                                // 1=Job, 2=Shop, 3=Travel
        unionloc: '',                             // Union local
        billat: '',                               // Billing rate
@@ -1137,21 +1143,59 @@ function recalculate() {
 
  // Export table
  const tbody = document.getElementById('exportBody');
- tbody.innerHTML = ceRows.map(r => `
-   <tr>
+ const classOptions = ['','OPER A','MGMT','LAB GEN','LAB GENB','FOREMAN','MECHANIC','CARP','DRIVER'];
+ const deptOptions = ['','FIELD','SHOP','ADMIN'];
+
+ tbody.innerHTML = ceRows.map((r, idx) => {
+   const deptSelect = deptOptions.map(d =>
+     `<option value="${d}" ${r.department === d ? 'selected' : ''}>${d || '—'}</option>`
+   ).join('');
+   const classSelect = classOptions.map(c =>
+     `<option value="${c}" ${r.class === c ? 'selected' : ''}>${c || '—'}</option>`
+   ).join('');
+   const isOT = r.type === 2;
+   return `
+   <tr style="background:${r.department === 'SHOP' ? 'rgba(255,160,0,0.08)' : r.department === 'ADMIN' ? 'rgba(100,100,255,0.08)' : ''}">
      <td class="mono">${r.emp}</td>
-     <td>${r.type === 2 ? '<span class="tag tag-ot">2-OT</span>' : '<span class="tag tag-reg">1-REG</span>'}</td>
-     <td class="mono">${r.otmult || ''}</td>
+     <td class="mono">${r.date}</td>
+     <td><select data-idx="${idx}" data-field="department" onchange="updateCeRow(this)" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:11px">${deptSelect}</select></td>
+     <td><select data-idx="${idx}" data-field="class" onchange="updateCeRow(this)" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:11px">${classSelect}</select></td>
+     <td>${isOT ? '<span class="tag tag-ot">2-OT</span>' : '<span class="tag tag-reg">1-REG</span>'}</td>
      <td class="mono">${r.job}</td>
-     <td class="mono">${r.phase}</td>
-     <td class="mono">${r.cat}</td>
+     <td class="mono">${r.phase}${r.cat ? '.' + r.cat : ''}</td>
      <td class="mono">${r.worktype}</td>
      <td class="mono" style="text-align:right">${r.hours.toFixed(2)}</td>
-     <td class="mono">${r.date}</td>
-     <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.des1}</td>
+     <td><input type="text" data-idx="${idx}" data-field="des1" value="${(r.des1 || '').replace(/"/g, '&quot;')}" maxlength="30" onchange="updateCeRow(this)" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:11px;width:160px;font-family:inherit"></td>
      <td class="mono">${r.equipnum}</td>
-   </tr>
- `).join('');
+   </tr>`;
+ }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// UPDATE CE ROW FROM DROPDOWNS
+// ═══════════════════════════════════════════════════════
+function updateCeRow(el) {
+ const idx = parseInt(el.dataset.idx);
+ const field = el.dataset.field;
+ if (state.ceRows[idx]) {
+   state.ceRows[idx][field] = el.value;
+   // If department changed, auto-adjust worktype
+   if (field === 'department') {
+     if (el.value === 'FIELD') state.ceRows[idx].worktype = 1;
+     else if (el.value === 'SHOP') state.ceRows[idx].worktype = 2;
+     else if (el.value === 'ADMIN') state.ceRows[idx].worktype = 2;
+     // Update the worktype cell in the same row
+     const row = el.closest('tr');
+     if (row) {
+       const wtCell = row.querySelector('td:nth-child(8)');
+       if (wtCell) wtCell.textContent = state.ceRows[idx].worktype;
+     }
+     // Update row background
+     if (el.value === 'SHOP') row.style.background = 'rgba(255,160,0,0.08)';
+     else if (el.value === 'ADMIN') row.style.background = 'rgba(100,100,255,0.08)';
+     else row.style.background = '';
+   }
+ }
 }
 
 // ═══════════════════════════════════════════════════════
