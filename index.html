@@ -18,14 +18,25 @@
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
   ];
   window._pdfWorkerSources = workerSources;
+  window._pdfLoadStatus = 'loading';
   function tryLoad(idx) {
     if (idx >= sources.length) {
-      console.error('All pdf.js CDN sources blocked. PDF upload will not work - use paste instead.');
+      window._pdfLoadStatus = 'failed';
+      console.error('All pdf.js CDN sources blocked.');
+      // Show error on page once DOM is ready
+      document.addEventListener('DOMContentLoaded', function() {
+        var hint = document.querySelector('.drop-zone .hint');
+        if (hint) hint.innerHTML = '<span style="color:#ef4444">⚠ PDF library failed to load. Use "Paste Time Card Text" below instead.</span>';
+      });
       return;
     }
     var s = document.createElement('script');
     s.src = sources[idx];
-    s.onload = function() { window._pdfjsLoadedFrom = idx; if (typeof initPdfWorker === 'function') initPdfWorker(); };
+    s.onload = function() {
+      window._pdfjsLoadedFrom = idx;
+      window._pdfLoadStatus = 'ready';
+      if (typeof initPdfWorker === 'function') initPdfWorker();
+    };
     s.onerror = function() { console.warn('pdf.js blocked from: ' + sources[idx]); tryLoad(idx + 1); };
     document.head.appendChild(s);
   }
@@ -561,9 +572,10 @@ async function handleFile(file) {
    document.getElementById('parseStatus').textContent = 'Extracting time entries...';
    document.getElementById('progressFill').style.width = '100%';
 
-   // Debug: show raw text in console
+   // Debug: show raw text in console and paste area for visibility
    console.log('=== RAW PDF TEXT ===');
-   console.log(allText.substring(0, 3000));
+   console.log(allText);
+   document.getElementById('pasteArea').value = allText;
 
    parseTimeEntries(allText);
 
