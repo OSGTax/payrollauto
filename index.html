@@ -392,7 +392,6 @@
            <th>worktype</th>
            <th>hours</th>
            <th>des1</th>
-           <th>equipnum</th>
          </tr>
        </thead>
        <tbody id="exportBody"></tbody>
@@ -1034,13 +1033,16 @@ function recalculate() {
        phase = mapping.phase || '';
        cat = mapping.cat || '';
        worktype = parseInt(mapping.worktype) || 2;
-       des1 = (mapping.des1 || entry.shopCode || entry.costCodeDesc || '').substring(0, 30);
-       // Shop entries: equipment name goes to des1 for mechanic work
-       if (entry.equipment && entry.costCodeDesc && entry.costCodeDesc.match(/mechanic/i)) {
-         des1 = entry.equipment.substring(0, 30);
+       des1 = '';
+       // Shop + AJK Trucking → DRIVER, Shop + equipment → MECHANIC, else LAB GEN
+       if (entry.costCodeDesc && entry.costCodeDesc.match(/AJK\s*Trucking/i)) {
+         empClass = 'DRIVER';
+       } else if (entry.equipment) {
+         empClass = 'MECHANIC';
+       } else {
+         empClass = 'LAB GEN';
        }
        department = entry.costCodeDesc && entry.costCodeDesc.match(/office|admin/i) ? 'ADMIN' : 'SHOP';
-       empClass = entry.costCodeDesc && entry.costCodeDesc.match(/mechanic/i) ? 'MECHANIC' : '';
        // Shop & Admin: no cost code in CE
        job = ''; phase = ''; cat = '';
      } else {
@@ -1050,10 +1052,10 @@ function recalculate() {
        phase = ccParts[0] || '';
        cat = ccParts[1] || '';
        worktype = 1;
-       des1 = (entry.costCodeDesc || entry.description || '').substring(0, 30);
+       des1 = '';
        department = 'FIELD';
-       // Equipment + job cost code = operating equipment = OPER A
-       empClass = entry.equipment ? 'OPER A' : '';
+       // Equipment + job cost code = OPER A, otherwise LAB GEN
+       empClass = entry.equipment ? 'OPER A' : 'LAB GEN';
      }
 
      const prevAccum = accumulated;
@@ -1087,7 +1089,7 @@ function recalculate() {
        units: '',                                // Units completed
        costtype: '',                             // Cost type
        costcode: '',                             // Combined job.phase.cat (unused, we use separate fields)
-       equipnum: entry.equipment || '',          // Equipment code
+       equipnum: '',                               // Equipment code (not exported)
        equipcode: '',                            // Equipment cost/revenue code
        equiporder: '',                           // Equipment work order
        equiphours: '',                           // Equipment hours
@@ -1166,7 +1168,6 @@ function recalculate() {
      <td class="mono">${r.worktype}</td>
      <td class="mono" style="text-align:right">${r.hours.toFixed(2)}</td>
      <td><input type="text" data-idx="${idx}" data-field="des1" value="${(r.des1 || '').replace(/"/g, '&quot;')}" maxlength="30" onchange="updateCeRow(this)" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:11px;width:160px;font-family:inherit"></td>
-     <td class="mono">${r.equipnum}</td>
    </tr>`;
  }).join('');
 }
