@@ -101,7 +101,7 @@ export default function ClockScreen() {
 
       // Trucking for AJK Job → designation 'job', job code from selected project
       // Trucking for Others → designation 'other', description in trucking_job_code
-      let truckingDesignation: string | null = null;
+      let truckingDesignation: 'shop' | 'small' | 'job' | 'other' | null = null;
       let truckingJobCode: string | null = null;
       if (shopType === 'trucking_ajk' && truckingJobId) {
         truckingDesignation = 'job';
