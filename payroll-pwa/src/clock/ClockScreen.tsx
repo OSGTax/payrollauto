@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthProvider';
-import { clockIn, clockOut, getActiveEntry, getProjects, getCostCodes, getEquipment } from '../db/queries';
+import { clockIn, clockOut, getActiveEntry, getProjects, getCostCodes, getEquipment, uploadPhoto } from '../db/queries';
 import { captureGps } from './GpsCapture';
 import { WORKER_CLASSES } from '../db/types';
 import type { Project, CostCode, Equipment, TimeEntry } from '../db/types';
