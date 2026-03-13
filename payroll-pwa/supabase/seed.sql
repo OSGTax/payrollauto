@@ -28,7 +28,8 @@ INSERT INTO equipment (name, description) VALUES
   ('T-106', '2020 Volvo A30G Articulated Hauler');
 
 -- NOTE: To create employee users, use Supabase Auth:
--- 1. Create auth user: supabase auth admin create-user --email "jsmith@crew.local" --password "1234"
+-- Employee IDs follow the format: AJK + LASTNAME (e.g. AJKSMITH for John Smith)
+-- 1. Create auth user: supabase auth admin create-user --email "ajksmith@crew.local" --password "1234"
 -- 2. Insert employee record:
 --    INSERT INTO employees (emp_id, full_name, role, default_class)
---    VALUES ('JSMITH', 'John Smith', 'admin', 'MGMT');
+--    VALUES ('AJKSMITH', 'John Smith', 'admin', 'MGMT');

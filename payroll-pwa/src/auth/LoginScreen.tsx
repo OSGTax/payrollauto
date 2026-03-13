@@ -36,7 +36,7 @@ export default function LoginScreen() {
               type="text"
               value={empId}
               onChange={(e) => setEmpId(e.target.value.toUpperCase())}
-              placeholder="e.g. JSMITH"
+              placeholder="e.g. AJKSMITH"
               className="w-full bg-slate-800 text-white rounded-lg px-4 py-3 text-lg border border-slate-700 focus:border-brand focus:outline-none"
               autoComplete="username"
               autoCapitalize="characters"
