@@ -105,7 +105,7 @@ export async function getEntriesForWeek(employeeId: string, weekStart: string, w
 export async function getAllEntriesForDateRange(start: string, end: string) {
   const { data, error } = await supabase
     .from('time_entries')
-    .select('*, employees(emp_id, full_name)')
+    .select('*, employees(emp_id, full_name), projects(project_num, name), cost_codes(code, description), equipment(name, description)')
     .gte('clock_in', start)
     .lte('clock_in', end)
     .order('clock_in');
@@ -121,6 +121,43 @@ export async function updateEntryStatus(entryId: string, status: 'approved' | 'f
       reviewed_by: reviewerId,
       reviewed_at: new Date().toISOString(),
       admin_notes: notes || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', entryId);
+  if (error) throw error;
+}
+
+export async function batchUpdateStatus(
+  entryIds: string[],
+  status: 'approved' | 'flagged',
+  reviewerId: string,
+  notes?: string
+) {
+  const { error } = await supabase
+    .from('time_entries')
+    .update({
+      status,
+      reviewed_by: reviewerId,
+      reviewed_at: new Date().toISOString(),
+      admin_notes: notes || null,
+      updated_at: new Date().toISOString(),
+    })
+    .in('id', entryIds);
+  if (error) throw error;
+}
+
+export async function updateEntryTimes(
+  entryId: string,
+  clockIn: string,
+  clockOut: string | null,
+  reviewerId: string
+) {
+  const { error } = await supabase
+    .from('time_entries')
+    .update({
+      clock_in: clockIn,
+      clock_out: clockOut,
+      reviewed_by: reviewerId,
       updated_at: new Date().toISOString(),
     })
     .eq('id', entryId);
