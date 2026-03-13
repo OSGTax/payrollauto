@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase
         .from('employees')
         .select('*')
-        .eq('emp_id', empId)
+        .ilike('emp_id', empId)
         .single();
       if (error) throw error;
       setEmployee(data as Employee);
