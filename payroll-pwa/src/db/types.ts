@@ -44,7 +44,7 @@ export interface TimeEntry {
   clock_in_accuracy: number | null;
   equipment_id: string | null;
   notes: string | null;
-  trucking_designation: 'shop' | 'small' | 'job' | null;
+  trucking_designation: 'shop' | 'small' | 'job' | 'other' | null;
   trucking_job_code: string | null;
   status: 'pending' | 'approved' | 'flagged';
   admin_notes: string | null;
