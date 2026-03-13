@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import ClockScreen from './clock/ClockScreen';
 import TimesheetScreen from './timesheet/TimesheetScreen';
 import AdminDashboard from './admin/AdminDashboard';
+import DataManagement from './admin/DataManagement';
 import SettingsScreen from './admin/SettingsScreen';
 
 function AppRoutes() {
@@ -29,6 +30,7 @@ function AppRoutes() {
           <Route path="/" element={<ClockScreen />} />
           <Route path="/timesheet" element={<TimesheetScreen />} />
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/data" element={<DataManagement />} />
           <Route path="/settings" element={<SettingsScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
