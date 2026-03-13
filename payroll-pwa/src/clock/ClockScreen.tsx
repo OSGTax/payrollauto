@@ -5,7 +5,23 @@ import { captureGps } from './GpsCapture';
 import { WORKER_CLASSES } from '../db/types';
 import type { Project, CostCode, Equipment, TimeEntry } from '../db/types';
 
-type ShopType = 'mechanic' | 'trucking' | 'misc_shop' | 'office' | null;
+type ShopType = 'mechanic' | 'trucking_ajk' | 'trucking_others' | 'misc_shop' | 'office' | null;
+
+// Auto-default worker class based on shop type
+function shopWorkerClass(shopType: ShopType): string {
+  switch (shopType) {
+    case 'trucking_ajk':
+    case 'trucking_others':
+      return 'DRIVER';
+    case 'mechanic':
+      return 'MECHANIC';
+    case 'office':
+      return 'MGMT';
+    case 'misc_shop':
+    default:
+      return 'LAB GEN';
+  }
+}
 
 export default function ClockScreen() {
   const { employee } = useAuth();
@@ -21,6 +37,8 @@ export default function ClockScreen() {
   const [costCodeId, setCostCodeId] = useState('');
   const [workerClass, setWorkerClass] = useState('');
   const [equipmentId, setEquipmentId] = useState('');
+  const [truckingJobId, setTruckingJobId] = useState('');
+  const [truckingOtherDesc, setTruckingOtherDesc] = useState('');
   const [notes, setNotes] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
 
@@ -76,21 +94,39 @@ export default function ClockScreen() {
       let gps = { lat: 0, lng: 0, accuracy: 0 };
       try { gps = await captureGps(); } catch { /* GPS optional */ }
 
+      // Map UI shop type to DB values
+      const isTrucking = shopType === 'trucking_ajk' || shopType === 'trucking_others';
+      const dbShopType = isTrucking ? 'trucking' : shopType;
+      const finalWorkerClass = isShop ? shopWorkerClass(shopType) : workerClass;
+
+      // Trucking for AJK Job → designation 'job', job code from selected project
+      // Trucking for Others → designation 'other', description in trucking_job_code
+      let truckingDesignation: string | null = null;
+      let truckingJobCode: string | null = null;
+      if (shopType === 'trucking_ajk' && truckingJobId) {
+        truckingDesignation = 'job';
+        const proj = projects.find((p) => p.id === truckingJobId);
+        truckingJobCode = proj?.project_num || null;
+      } else if (shopType === 'trucking_others') {
+        truckingDesignation = 'other';
+        truckingJobCode = truckingOtherDesc || null;
+      }
+
       const entry = await clockIn({
         employee_id: employee.id,
         clock_in: new Date().toISOString(),
         project_id: isShop ? null : (projectId || null),
         cost_code_id: isShop ? null : (costCodeId || null),
         is_shop: isShop,
-        shop_type: isShop ? shopType : null,
-        worker_class: workerClass,
+        shop_type: isShop ? dbShopType : null,
+        worker_class: finalWorkerClass,
         clock_in_lat: gps.lat || null,
         clock_in_lng: gps.lng || null,
         clock_in_accuracy: gps.accuracy || null,
         equipment_id: shopType === 'mechanic' ? (equipmentId || null) : null,
         notes: notes || null,
-        trucking_designation: null,
-        trucking_job_code: null,
+        trucking_designation: truckingDesignation,
+        trucking_job_code: truckingJobCode,
         local_id: crypto.randomUUID(),
       });
 
@@ -128,6 +164,8 @@ export default function ClockScreen() {
     setProjectId('');
     setCostCodeId('');
     setEquipmentId('');
+    setTruckingJobId('');
+    setTruckingOtherDesc('');
     setNotes('');
     setPhotoFile(null);
   }
@@ -224,7 +262,8 @@ export default function ClockScreen() {
           onChange={(v) => setShopType(v as ShopType)}
           options={[
             { value: 'mechanic', label: 'Mechanic' },
-            { value: 'trucking', label: 'AJK Trucking' },
+            { value: 'trucking_ajk', label: 'Trucking for AJK Job' },
+            { value: 'trucking_others', label: 'Trucking for Others' },
             { value: 'misc_shop', label: 'Miscellaneous Shop' },
             { value: 'office', label: 'Office / Admin' },
           ]}
@@ -243,13 +282,46 @@ export default function ClockScreen() {
         />
       )}
 
-      {/* Worker class */}
-      <Select
-        label="Worker Class"
-        value={workerClass}
-        onChange={setWorkerClass}
-        options={WORKER_CLASSES.map((c) => ({ value: c, label: c }))}
-      />
+      {/* Trucking for AJK Job → pick a job code only */}
+      {isShop && shopType === 'trucking_ajk' && (
+        <Select
+          label="Job Code"
+          value={truckingJobId}
+          onChange={setTruckingJobId}
+          options={projects.map((p) => ({ value: p.id, label: `${p.project_num} - ${p.name}` }))}
+          placeholder="Select job code"
+        />
+      )}
+
+      {/* Trucking for Others → manual entry */}
+      {isShop && shopType === 'trucking_others' && (
+        <div>
+          <label className="block text-sm text-slate-400 mb-1">Description</label>
+          <input
+            type="text"
+            value={truckingOtherDesc}
+            onChange={(e) => setTruckingOtherDesc(e.target.value)}
+            placeholder="Who / what was the trucking for?"
+            className="w-full bg-slate-800 text-white rounded-lg px-4 py-3 border border-slate-700 focus:border-brand focus:outline-none"
+          />
+        </div>
+      )}
+
+      {/* Worker class — auto-set for shop, manual for job */}
+      {isShop && shopType && (
+        <div className="bg-slate-800/50 rounded-lg px-4 py-3 border border-slate-700">
+          <span className="text-sm text-slate-400">Worker Class: </span>
+          <span className="text-white font-medium">{shopWorkerClass(shopType)}</span>
+        </div>
+      )}
+      {!isShop && (
+        <Select
+          label="Worker Class"
+          value={workerClass}
+          onChange={setWorkerClass}
+          options={WORKER_CLASSES.map((c) => ({ value: c, label: c }))}
+        />
+      )}
 
       {/* Notes */}
       <div>
@@ -278,7 +350,7 @@ export default function ClockScreen() {
       {/* Clock In Button */}
       <button
         onClick={handleClockIn}
-        disabled={clocking || (!isShop && !projectId)}
+        disabled={clocking || (!isShop && !projectId) || (isShop && !shopType) || (shopType === 'trucking_ajk' && !truckingJobId) || (shopType === 'trucking_others' && !truckingOtherDesc.trim())}
         className="w-full py-4 bg-success hover:bg-success/90 text-white text-xl font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
       >
         {clocking ? 'Clocking In...' : 'CLOCK IN'}

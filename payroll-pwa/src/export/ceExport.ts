@@ -61,11 +61,13 @@ export function buildCeRows(
 
       if (entry.is_shop) {
         des1 = '';
-        // AJK Trucking → DRIVER, mechanic → MECHANIC, else LAB GEN
+        // Auto-default worker class by shop type
         if (entry.shop_type === 'trucking') {
           empClass = 'DRIVER';
         } else if (entry.shop_type === 'mechanic') {
           empClass = 'MECHANIC';
+        } else if (entry.shop_type === 'office') {
+          empClass = 'MGMT';
         } else {
           empClass = 'LAB GEN';
         }
@@ -75,9 +77,15 @@ export function buildCeRows(
           job = '26-000'; phase = '03'; cat = '1010';
           worktype = 1; department = 'FIELD';
         } else if (entry.shop_type === 'trucking' && entry.trucking_designation === 'job') {
-          const parts = (entry.trucking_job_code || '').split('.');
-          job = parts[0] || ''; phase = parts[1] || ''; cat = parts[2] || '';
+          // AJK Job trucking — job code is just the project number
+          job = entry.trucking_job_code || '';
+          phase = ''; cat = '';
           worktype = 1; department = 'FIELD';
+        } else if (entry.shop_type === 'trucking' && entry.trucking_designation === 'other') {
+          // Trucking for Others — description stored in trucking_job_code
+          des1 = entry.trucking_job_code || '';
+          job = ''; phase = ''; cat = '';
+          worktype = 2;
         } else {
           job = ''; phase = ''; cat = '';
           worktype = 2;
