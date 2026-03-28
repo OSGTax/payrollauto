@@ -9,27 +9,22 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons/*.png'],
       manifest: {
-        name: 'CrewClock - Time Tracking',
+        name: 'CrewClock - AJK Construction',
         short_name: 'CrewClock',
-        description: 'Construction crew time tracking with CE export',
-        theme_color: '#1e293b',
+        description: 'Time tracking for AJK Construction',
+        theme_color: '#0f172a',
         background_color: '#0f172a',
         display: 'standalone',
-        orientation: 'portrait',
-        start_url: '/',
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/.*supabase\.co\/.*/i,
+            urlPattern: /^https:\/\/ittohljkoyhwgujkaugy\.supabase\.co\/rest/,
             handler: 'NetworkFirst',
             options: { cacheName: 'supabase-api', expiration: { maxEntries: 50 } },
           },
