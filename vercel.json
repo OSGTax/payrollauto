@@ -1,0 +1,8 @@
+{
+  "buildCommand": "cd payroll-pwa && npm run build",
+  "installCommand": "cd payroll-pwa && npm install --legacy-peer-deps",
+  "outputDirectory": "payroll-pwa/dist",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
