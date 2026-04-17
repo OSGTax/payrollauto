@@ -11,11 +11,16 @@ export async function login(form: FormData) {
     redirect('/login?error=Missing+code+or+password');
   }
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
-    email: codeToEmail(code),
-    password,
-  });
+  const email = codeToEmail(code);
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
+    console.error('[login] signInWithPassword failed', {
+      email,
+      code,
+      status: error.status,
+      name: error.name,
+      message: error.message,
+    });
     redirect('/login?error=' + encodeURIComponent('Invalid code or password'));
   }
   redirect('/');
