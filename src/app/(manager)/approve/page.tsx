@@ -46,7 +46,7 @@ export default async function ApprovePage({
       <p className="mb-4 text-sm text-slate-500">
         Week of {format(parseISO(start), 'MMM d, yyyy')}
       </p>
-      <ApprovalTable rows={rows} classes={classes ?? []} jobs={jobs ?? []} />
+      <ApprovalTable rows={rows} classes={classes ?? []} jobs={jobs ?? []} days={days} />
     </div>
   );
 }
