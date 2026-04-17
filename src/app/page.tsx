@@ -7,8 +7,6 @@ export default async function Home() {
   switch (emp.role) {
     case 'admin':
       redirect('/admin');
-    case 'manager':
-      redirect('/approve');
     default:
       redirect('/clock');
   }
