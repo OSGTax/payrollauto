@@ -33,11 +33,13 @@ export async function saveEmployee(id: string | null, form: FormData) {
   const db = await createClient();
 
   if (!id) {
-    // Create the auth user first (bypasses RLS via service role)
+    if (!p.password || p.password.length < 8) {
+      return { error: 'Password required (min 8 characters) on new employee.' };
+    }
     const email = codeToEmail(p.emp_code);
     const { data: userRes, error: userErr } = await admin.auth.admin.createUser({
       email,
-      password: p.password ?? undefined,
+      password: p.password,
       email_confirm: true,
     });
     if (userErr) return { error: userErr.message };
