@@ -14,11 +14,13 @@ export async function login(form: FormData) {
   const email = codeToEmail(code);
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
+    const code = (error as { code?: string }).code ?? error.name;
     console.error(
-      `LOGIN_FAIL status=${error.status} name=${error.name} msg=${error.message} email=${email}`,
+      `LOGIN_FAIL status=${error.status} code=${code} name=${error.name} msg=${error.message} email=${email}`,
     );
-    const detail = `${error.status ?? ''} ${error.message}`.trim();
-    redirect('/login?error=' + encodeURIComponent(`Invalid code or password (${detail})`));
+    redirect(
+      '/login?error=' + encodeURIComponent(`Invalid code or password (${code})`),
+    );
   }
   redirect('/');
 }
