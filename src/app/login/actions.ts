@@ -17,7 +17,8 @@ export async function login(form: FormData) {
     console.error(
       `LOGIN_FAIL status=${error.status} name=${error.name} msg=${error.message} email=${email}`,
     );
-    redirect('/login?error=' + encodeURIComponent('Invalid code or password'));
+    const detail = `${error.status ?? ''} ${error.message}`.trim();
+    redirect('/login?error=' + encodeURIComponent(`Invalid code or password (${detail})`));
   }
   redirect('/');
 }
