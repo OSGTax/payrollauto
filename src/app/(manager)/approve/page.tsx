@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server';
 import { requireRole } from '@/lib/session';
 import { isoDate, isoWeekStart, weekDays } from '@/lib/week';
 import { ApprovalTable } from './ApprovalTable';
-import { format, parseISO, subDays } from 'date-fns';
+import { WeekNav } from './WeekNav';
+import { parseISO } from 'date-fns';
 
 export default async function ApprovePage({
   searchParams,
@@ -12,7 +13,7 @@ export default async function ApprovePage({
   await requireRole(['manager', 'admin']);
   const supabase = await createClient();
   const { week } = await searchParams;
-  const anchor = week ? parseISO(week) : subDays(new Date(), 7);
+  const anchor = week ? parseISO(week) : new Date();
   const start = isoWeekStart(anchor);
   const days = weekDays(anchor).map(isoDate);
 
@@ -42,10 +43,8 @@ export default async function ApprovePage({
 
   return (
     <div className="mx-auto max-w-5xl p-4">
-      <h1 className="mb-1 text-xl font-semibold">Approve week</h1>
-      <p className="mb-4 text-sm text-slate-500">
-        Week of {format(parseISO(start), 'MMM d, yyyy')}
-      </p>
+      <h1 className="mb-3 text-xl font-semibold">Approve</h1>
+      <WeekNav anchorIso={start} />
       <ApprovalTable rows={rows} classes={classes ?? []} jobs={jobs ?? []} days={days} />
     </div>
   );
