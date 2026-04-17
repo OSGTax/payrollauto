@@ -62,6 +62,22 @@ export async function saveEmployee(id: string | null, form: FormData) {
       return { error: insErr.message };
     }
   } else {
+    const { data: existing, error: fetchErr } = await admin
+      .from('employees')
+      .select('emp_code, auth_user_id')
+      .eq('id', id)
+      .maybeSingle();
+    if (fetchErr) return { error: fetchErr.message };
+    if (!existing) return { error: 'Employee not found.' };
+
+    if (p.emp_code !== existing.emp_code && existing.auth_user_id) {
+      const { error: emailErr } = await admin.auth.admin.updateUserById(
+        existing.auth_user_id,
+        { email: codeToEmail(p.emp_code), email_confirm: true },
+      );
+      if (emailErr) return { error: `Auth email update failed: ${emailErr.message}` };
+    }
+
     const { error } = await db
       .from('employees')
       .update({
