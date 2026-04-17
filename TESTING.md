@@ -84,25 +84,44 @@ Sign in as admin.
 ## 4. Worker clock-in flow — ⏳ pending
 
 - [ ] Clock in: pick job → phase → category → class → dept
-- [ ] Clock out — duration computed, visible on week view
+- [ ] Clock out — duration computed, visible on week view, **status auto-flips `draft` → `submitted`** (no manual submit)
 - [ ] Only one open entry at a time
 - [ ] Class defaults for WC1/WC2 propagate to the entry
 - [ ] `/week` shows the current week; totals add up
-- [ ] Submit for approval — entries move from `draft` → `submitted`; can no longer edit
+
+**Note:** there is no "Submit for approval" button by design. Clock-out is the submit event (see [clock/actions.ts:89](src/app/(worker)/clock/actions.ts#L89)). Workers edit mistakes via change requests (step 6), not direct edits.
 
 ## 5. Manager approvals — ⏳ pending
 
 - [ ] Bottom nav shows "Approve" tab with red-dot count = entries where `status='submitted'`
-- [ ] Open `/approve` — list of submitted entries grouped by worker / week
+- [ ] Open `/approve` — list of submitted entries grouped by worker for the week
 - [ ] Approve one — moves to `approved`, badge count decreases
-- [ ] Reject with a note — returns to `draft` with reason visible to worker
-- [ ] Manager can also clock themselves in (they land on `/clock` by default now)
+- [ ] Edit class/job inline and save — entry is updated (still needs explicit approve after)
+- [ ] Manager can also clock themselves in (lands on `/clock` by default)
+
+**No reject-to-worker path.** Managers approve or edit+approve. Worker-side corrections happen via change requests.
+
+## 5b. Admin push-back (timecard rework) — ⏳ pending
+
+Admin can revert selected approved entries back to `submitted` so the manager re-reviews.
+
+- [ ] On [/admin/entries](src/app/admin/entries/page.tsx), approved rows show a checkbox; others are disabled
+- [ ] Select one or more approved entries → action bar appears with an optional note field
+- [ ] "Push back to manager" → entries flip to `submitted`, `approved_by`/`approved_at` cleared, `admin_note` + `pushed_back_at` stamped
+- [ ] Manager's `/approve` page shows a "↩ Pushed back by admin — <note>" banner above each affected row
+- [ ] Re-approving a pushed-back entry works (status returns to `approved`; `admin_note` stays as an audit trail)
+- [ ] Guard: selecting a non-approved row is blocked by the disabled checkbox; server action also filters by `status='approved'`
 
 ## 6. Change requests — ⏳ pending
 
-- [ ] Worker on `/request-change` picks an approved entry, submits a correction note
-- [ ] Admin sees it on `/admin/requests`; can apply or dismiss
-- [ ] Applying edits the underlying entry and marks the request resolved
+Workers file a freeform note; admins read it and manually fix the referenced entry.
+
+- [ ] Worker on `/request-change` picks an entry, submits a correction message
+- [ ] Admin sees it on `/admin/requests` with an "Open entry" link → jumps to `/admin/entries/[id]`
+- [ ] Admin makes the fix on the entry page, returns to `/admin/requests`
+- [ ] **"Mark done"** → sets `status='approved'` on the request (acknowledgement only — no auto-apply)
+- [ ] **"Dismiss"** → sets `status='rejected'`
+- [ ] Resolved requests drop off the pending list
 
 ## 7. Sick time & photos — ⏳ pending
 
@@ -124,3 +143,6 @@ Sign in as admin.
 - **Password required** — server-side check added in `ef0f0ec` after an incident where blank form password silently created a passwordless auth user.
 - **`invalid_credentials`** — Supabase returns this for both wrong password and unknown email (anti-enumeration). Do not try to distinguish client-side.
 - **Job import is upsert + idempotent** — but won't reactivate deactivated jobs.
+- **Entry lifecycle** — `draft` (open shift) → `submitted` (on clock-out, auto) → `approved` (manager) → `exported` (payroll run). `locked` is set when a week lock kicks in.
+- **Change requests are freeform notes** — no structured `proposed_changes`. Admins fix the entry manually and then "Mark done" the request.
+- **Admin push-back** — reverts `approved` → `submitted` on individual entries, with an optional note to the manager. Column: `admin_note`, stamp: `pushed_back_at` + `pushed_back_by` (migration `0002_entry_pushback.sql`).

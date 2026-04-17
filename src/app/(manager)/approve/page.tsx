@@ -20,7 +20,7 @@ export default async function ApprovePage({
     .from('time_entries')
     .select(`
       id, employee_id, date, start_time, end_time, hours, type,
-      job, phase, cat, class, status,
+      job, phase, cat, class, status, admin_note, pushed_back_at,
       employees:employee_id ( id, emp_code, first_name, last_name, role )
     `)
     .gte('date', days[0])

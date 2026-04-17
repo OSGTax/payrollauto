@@ -19,6 +19,8 @@ type Row = {
   cat: string | null;
   class: string | null;
   status: string;
+  admin_note: string | null;
+  pushed_back_at: string | null;
   employees: { emp_code: string; first_name: string; last_name: string } | null;
 };
 
@@ -143,7 +145,13 @@ function EntryRow({
   }
 
   return (
-    <li className="flex flex-wrap items-center gap-2 py-2 text-sm">
+    <li className={`flex flex-wrap items-center gap-2 py-2 text-sm ${row.pushed_back_at ? 'bg-amber-50 -mx-3 px-3' : ''}`}>
+      {row.pushed_back_at && (
+        <div className="w-full text-xs text-amber-700">
+          <span className="font-medium">↩ Pushed back by admin</span>
+          {row.admin_note && <span className="ml-1">— {row.admin_note}</span>}
+        </div>
+      )}
       <span className="w-20 tabular-nums text-slate-600">
         {format(parseISO(row.date), 'EEE M/d')}
       </span>
