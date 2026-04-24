@@ -43,12 +43,12 @@ export function JobPicker({
   }, [value.job, value.phase, supabase]);
 
   const selectCls =
-    'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base focus:border-slate-900 focus:outline-none';
+    'w-full rounded-lg border border-brand-ink-200 bg-white px-3 py-2 text-base focus:border-brand-ink-900 focus:outline-none';
 
   return (
     <div className="flex flex-col gap-2">
       <label className="flex flex-col gap-1 text-left">
-        <span className="text-xs font-medium text-slate-600">Job</span>
+        <span className="text-xs font-medium text-brand-ink-600">Job</span>
         <select
           className={selectCls}
           value={value.job ?? ''}
@@ -64,7 +64,7 @@ export function JobPicker({
       </label>
 
       <label className="flex flex-col gap-1 text-left">
-        <span className="text-xs font-medium text-slate-600">Phase</span>
+        <span className="text-xs font-medium text-brand-ink-600">Phase</span>
         <select
           className={selectCls}
           value={value.phase ?? ''}
@@ -81,7 +81,7 @@ export function JobPicker({
       </label>
 
       <label className="flex flex-col gap-1 text-left">
-        <span className="text-xs font-medium text-slate-600">Category</span>
+        <span className="text-xs font-medium text-brand-ink-600">Category</span>
         <select
           className={selectCls}
           value={value.cat ?? ''}

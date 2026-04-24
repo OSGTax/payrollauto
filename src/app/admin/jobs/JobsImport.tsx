@@ -36,17 +36,17 @@ export function JobsImport() {
         onChange={(e) => setText(e.target.value)}
         rows={5}
         placeholder="job_code,description,state,local"
-        className="rounded border border-slate-300 bg-white px-3 py-2 font-mono text-sm"
+        className="rounded border border-brand-ink-200 bg-white px-3 py-2 font-mono text-sm"
       />
       <div className="flex items-center gap-3">
         <button
           onClick={submit}
           disabled={pending}
-          className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-lg bg-brand-yellow-400 hover:bg-brand-yellow-500 px-3 py-2 text-sm font-medium text-brand-ink-900 disabled:opacity-50"
         >
           {pending ? 'Importing…' : 'Import'}
         </button>
-        {msg && <p className="text-sm text-slate-600">{msg}</p>}
+        {msg && <p className="text-sm text-brand-ink-600">{msg}</p>}
       </div>
     </div>
   );

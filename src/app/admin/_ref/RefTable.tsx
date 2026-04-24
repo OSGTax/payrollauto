@@ -66,26 +66,26 @@ export function RefTable({
   return (
     <div className="mx-auto max-w-3xl p-6">
       <h1 className="mb-4 text-xl font-semibold">{title}</h1>
-      <div className="mb-4 flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white p-3">
+      <div className="mb-4 flex flex-wrap gap-2 rounded-lg border border-brand-ink-200 bg-white p-3">
         <input
           placeholder="Code"
           maxLength={8}
           value={draft.code}
           onChange={(e) => setDraft({ ...draft, code: e.target.value })}
-          className="w-32 rounded border border-slate-300 px-2 py-1 text-sm"
+          className="w-32 rounded border border-brand-ink-200 px-2 py-1 text-sm"
         />
         <input
           placeholder="Description"
           value={draft.description}
           onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-          className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
+          className="flex-1 rounded border border-brand-ink-200 px-2 py-1 text-sm"
         />
         {hasWcompDefaults && (
           <>
             <select
               value={draft.default_wcomp1 ?? ''}
               onChange={(e) => setDraft({ ...draft, default_wcomp1: e.target.value || null })}
-              className="rounded border border-slate-300 px-2 py-1 text-sm"
+              className="rounded border border-brand-ink-200 px-2 py-1 text-sm"
             >
               <option value="">WC1…</option>
               {wcompOptions?.map((w) => <option key={w} value={w}>{w}</option>)}
@@ -93,22 +93,22 @@ export function RefTable({
             <select
               value={draft.default_wcomp2 ?? ''}
               onChange={(e) => setDraft({ ...draft, default_wcomp2: e.target.value || null })}
-              className="rounded border border-slate-300 px-2 py-1 text-sm"
+              className="rounded border border-brand-ink-200 px-2 py-1 text-sm"
             >
               <option value="">WC2…</option>
               {wcompOptions?.map((w) => <option key={w} value={w}>{w}</option>)}
             </select>
           </>
         )}
-        <button onClick={add} disabled={pending} className="rounded bg-slate-900 px-3 py-1 text-sm text-white">
+        <button onClick={add} disabled={pending} className="rounded bg-brand-yellow-400 hover:bg-brand-yellow-500 px-3 py-1 text-sm text-brand-ink-900">
           + Add
         </button>
       </div>
       {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="overflow-hidden rounded-lg border border-brand-ink-200 bg-white">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <thead className="bg-brand-ink-50 text-left text-xs uppercase text-brand-ink-500">
             <tr>
               <th className="px-3 py-2">Code</th>
               <th className="px-3 py-2">Description</th>
@@ -120,7 +120,7 @@ export function RefTable({
               <th />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="divide-y divide-brand-ink-200">
             {rows.map((r) => (
               <tr key={r.code}>
                 <td className="px-3 py-2 font-mono">{r.code}</td>
@@ -130,7 +130,7 @@ export function RefTable({
                   <td className="px-3 py-2 font-mono text-xs">{r.default_wcomp2 ?? '—'}</td>
                 </>}
                 <td className="px-3 py-2">
-                  <button onClick={() => toggleActive(r)} className={r.active ? 'text-emerald-600' : 'text-slate-400'}>
+                  <button onClick={() => toggleActive(r)} className={r.active ? 'text-emerald-600' : 'text-brand-ink-300'}>
                     {r.active ? 'Active' : 'Inactive'}
                   </button>
                 </td>

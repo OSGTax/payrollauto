@@ -76,9 +76,9 @@ export function EntryEditor({
   return (
     <form
       onSubmit={(e) => { e.preventDefault(); submit(); }}
-      className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4"
+      className="flex flex-col gap-3 rounded-lg border border-brand-ink-200 bg-white p-4"
     >
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-brand-ink-600">
         {emp?.emp_code} — {emp?.first_name} {emp?.last_name}
       </p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -163,7 +163,7 @@ export function EntryEditor({
         <button type="button" onClick={del} disabled={pending} className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-700 disabled:opacity-50">
           Delete entry
         </button>
-        <button disabled={pending} className="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white disabled:opacity-50">
+        <button disabled={pending} className="rounded-lg bg-brand-yellow-400 hover:bg-brand-yellow-500 px-4 py-2 font-medium text-brand-ink-900 disabled:opacity-50">
           {pending ? 'Saving…' : 'Save'}
         </button>
       </div>
@@ -172,12 +172,12 @@ export function EntryEditor({
 }
 
 const inp =
-  'w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm focus:border-slate-900 focus:outline-none';
+  'w-full rounded-lg border border-brand-ink-200 bg-white px-2 py-1.5 text-sm focus:border-brand-ink-900 focus:outline-none';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-xs font-medium text-slate-600">{label}</span>
+      <span className="text-xs font-medium text-brand-ink-600">{label}</span>
       {children}
     </label>
   );

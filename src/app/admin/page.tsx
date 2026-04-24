@@ -28,22 +28,22 @@ export default async function AdminHome() {
         <Stat label="Approved this week" value={approved} />
         <Stat label="Change requests" value={pending.count ?? 0} href="/admin/requests" />
       </div>
-      <h2 className="mt-8 mb-3 text-sm font-semibold uppercase text-slate-500">Quick actions</h2>
+      <h2 className="mt-8 mb-3 text-sm font-semibold uppercase text-brand-ink-500">Quick actions</h2>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <Link href="/admin/export" className="rounded-lg border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50">
+        <Link href="/admin/export" className="rounded-lg border border-brand-ink-200 bg-white px-4 py-3 hover:bg-brand-ink-50">
           Export payroll file →
         </Link>
-        <Link href="/admin/entries" className="rounded-lg border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50">
+        <Link href="/admin/entries" className="rounded-lg border border-brand-ink-200 bg-white px-4 py-3 hover:bg-brand-ink-50">
           Review / edit time entries →
         </Link>
-        <Link href="/admin/employees/new" className="rounded-lg border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50">
+        <Link href="/admin/employees/new" className="rounded-lg border border-brand-ink-200 bg-white px-4 py-3 hover:bg-brand-ink-50">
           Add employee →
         </Link>
-        <Link href="/admin/jobs/new" className="rounded-lg border border-slate-200 bg-white px-4 py-3 hover:bg-slate-50">
+        <Link href="/admin/jobs/new" className="rounded-lg border border-brand-ink-200 bg-white px-4 py-3 hover:bg-brand-ink-50">
           Add job →
         </Link>
       </div>
-      <p className="mt-6 text-xs text-slate-500">
+      <p className="mt-6 text-xs text-brand-ink-500">
         Week of {isoWeekStart(new Date())}.
       </p>
     </div>
@@ -52,8 +52,8 @@ export default async function AdminHome() {
 
 function Stat({ label, value, href }: { label: string; value: number; href?: string }) {
   const body = (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
-      <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
+    <div className="rounded-lg border border-brand-ink-200 bg-white p-4">
+      <p className="text-xs uppercase tracking-wide text-brand-ink-500">{label}</p>
       <p className="mt-1 text-2xl font-semibold">{value}</p>
     </div>
   );

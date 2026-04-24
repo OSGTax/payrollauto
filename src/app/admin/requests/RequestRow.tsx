@@ -39,14 +39,14 @@ export function RequestRow({ row }: { row: Row }) {
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3">
+    <div className="rounded-lg border border-brand-ink-200 bg-white p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium">
             {row.requested_by?.first_name} {row.requested_by?.last_name}{' '}
-            <span className="font-mono text-xs text-slate-500">{row.requested_by?.emp_code}</span>
+            <span className="font-mono text-xs text-brand-ink-500">{row.requested_by?.emp_code}</span>
           </p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-brand-ink-500">
             {format(parseISO(row.requested_at), 'PP p')} ·{' '}
             {row.entry && (
               <>
@@ -63,20 +63,20 @@ export function RequestRow({ row }: { row: Row }) {
               ? 'bg-amber-100 text-amber-700'
               : row.status === 'approved'
               ? 'bg-emerald-100 text-emerald-700'
-              : 'bg-slate-100 text-slate-600'
+              : 'bg-brand-ink-100 text-brand-ink-600'
           }`}
         >
           {row.status}
         </span>
       </div>
-      <p className="mt-2 text-sm text-slate-700">{row.message}</p>
+      <p className="mt-2 text-sm text-brand-ink-700">{row.message}</p>
       {row.voice_text && (
-        <p className="mt-1 text-xs italic text-slate-500">🎤 {row.voice_text}</p>
+        <p className="mt-1 text-xs italic text-brand-ink-500">🎤 {row.voice_text}</p>
       )}
       <div className="mt-3 flex items-center gap-2">
         <Link
           href={`/admin/entries/${row.time_entry_id}`}
-          className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50"
+          className="rounded border border-brand-ink-200 px-2 py-1 text-xs hover:bg-brand-ink-50"
         >
           Open entry
         </Link>
@@ -92,7 +92,7 @@ export function RequestRow({ row }: { row: Row }) {
             <button
               onClick={() => resolve('rejected')}
               disabled={pending}
-              className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700"
+              className="rounded border border-brand-ink-200 px-2 py-1 text-xs text-brand-ink-700"
             >
               Dismiss
             </button>

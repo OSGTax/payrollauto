@@ -88,7 +88,7 @@ export function EmployeeForm({
         <input type="checkbox" name="active" defaultChecked={e?.active ?? true} /> Active
       </label>
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <button disabled={pending} className="mt-2 rounded-lg bg-slate-900 px-4 py-2 font-medium text-white disabled:opacity-50">
+      <button disabled={pending} className="mt-2 rounded-lg bg-brand-yellow-400 hover:bg-brand-yellow-500 px-4 py-2 font-medium text-brand-ink-900 disabled:opacity-50">
         {pending ? 'Saving…' : 'Save'}
       </button>
     </form>
@@ -96,12 +96,12 @@ export function EmployeeForm({
 }
 
 const inp =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base focus:border-slate-900 focus:outline-none';
+  'w-full rounded-lg border border-brand-ink-200 bg-white px-3 py-2 text-base focus:border-brand-ink-900 focus:outline-none';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-xs font-medium text-slate-600">{label}</span>
+      <span className="text-xs font-medium text-brand-ink-600">{label}</span>
       {children}
     </label>
   );

@@ -32,9 +32,9 @@ export function SickForm({ weekDays, existing }: { weekDays: string[]; existing:
   return (
     <div className="flex flex-col gap-3">
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-slate-600">Day</span>
+        <span className="text-xs font-medium text-brand-ink-600">Day</span>
         <select
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2"
+          className="rounded-lg border border-brand-ink-200 bg-white px-3 py-2"
           value={date}
           onChange={(e) => setDate(e.target.value)}
         >
@@ -48,7 +48,7 @@ export function SickForm({ weekDays, existing }: { weekDays: string[]; existing:
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-slate-600">Hours</span>
+        <span className="text-xs font-medium text-brand-ink-600">Hours</span>
         <input
           type="number"
           min={0.25}
@@ -56,7 +56,7 @@ export function SickForm({ weekDays, existing }: { weekDays: string[]; existing:
           step={0.25}
           value={hours}
           onChange={(e) => setHours(Number(e.target.value))}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2"
+          className="rounded-lg border border-brand-ink-200 bg-white px-3 py-2"
         />
       </label>
 
@@ -65,7 +65,7 @@ export function SickForm({ weekDays, existing }: { weekDays: string[]; existing:
       <button
         onClick={submit}
         disabled={pending}
-        className="mt-2 rounded-lg bg-slate-900 px-4 py-2 font-medium text-white active:bg-slate-700 disabled:opacity-50"
+        className="mt-2 rounded-lg bg-brand-yellow-400 hover:bg-brand-yellow-500 px-4 py-2 font-medium text-brand-ink-900 active:bg-brand-yellow-600 disabled:opacity-50"
       >
         {pending ? 'Saving…' : 'Log sick time'}
       </button>

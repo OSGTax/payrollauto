@@ -29,7 +29,7 @@ export default async function EditEmployeePage({
         classes={classes.data ?? []}
         wcompCodes={wcs.data ?? []}
       />
-      <section className="mt-8 rounded-lg border border-slate-200 bg-white p-4">
+      <section className="mt-8 rounded-lg border border-brand-ink-200 bg-white p-4">
         <h2 className="mb-3 font-semibold">Reset password</h2>
         <ResetPassword employeeId={emp.data.id} />
       </section>

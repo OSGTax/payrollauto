@@ -19,13 +19,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <>
       <AppHeader employee={emp} />
-      <nav className="sticky top-[57px] z-[5] overflow-x-auto border-b border-slate-200 bg-white">
+      <nav className="overflow-x-auto border-b border-brand-ink-200 bg-white">
         <ul className="mx-auto flex max-w-6xl gap-1 px-4 py-2">
           {tabs.map((t) => (
             <li key={t.href}>
               <Link
                 href={t.href}
-                className="whitespace-nowrap rounded-full px-3 py-1 text-sm text-slate-600 hover:bg-slate-100"
+                className="whitespace-nowrap rounded-full px-3 py-1 text-sm font-medium text-brand-ink-600 hover:bg-brand-yellow-100 hover:text-brand-ink-900"
               >
                 {t.label}
               </Link>

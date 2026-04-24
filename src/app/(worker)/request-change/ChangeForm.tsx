@@ -31,9 +31,9 @@ export function ChangeForm({ entries }: { entries: TimeEntry[] }) {
   return (
     <div className="flex flex-col gap-3">
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-slate-600">Entry</span>
+        <span className="text-xs font-medium text-brand-ink-600">Entry</span>
         <select
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2"
+          className="rounded-lg border border-brand-ink-200 bg-white px-3 py-2"
           value={entryId}
           onChange={(e) => setEntryId(e.target.value)}
         >
@@ -50,13 +50,13 @@ export function ChangeForm({ entries }: { entries: TimeEntry[] }) {
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-slate-600">What needs to change?</span>
+        <span className="text-xs font-medium text-brand-ink-600">What needs to change?</span>
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           rows={4}
           placeholder="e.g. Clock-out was 5:30, not 5:00"
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2"
+          className="rounded-lg border border-brand-ink-200 bg-white px-3 py-2"
         />
         <VoiceInput onText={(t) => setMessage((m) => (m ? m + ' ' + t : t))} />
       </label>
@@ -66,7 +66,7 @@ export function ChangeForm({ entries }: { entries: TimeEntry[] }) {
       <button
         onClick={submit}
         disabled={pending}
-        className="mt-2 rounded-lg bg-slate-900 px-4 py-2 font-medium text-white active:bg-slate-700 disabled:opacity-50"
+        className="mt-2 rounded-lg bg-brand-yellow-400 hover:bg-brand-yellow-500 px-4 py-2 font-medium text-brand-ink-900 active:bg-brand-yellow-600 disabled:opacity-50"
       >
         {pending ? 'Sending…' : 'Send request'}
       </button>

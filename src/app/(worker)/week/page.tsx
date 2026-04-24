@@ -34,8 +34,8 @@ export default async function WeekPage() {
     <div className="mx-auto max-w-xl p-4">
       <div className="mb-3 flex items-end justify-between">
         <h1 className="text-lg font-semibold">Week of {format(parseISO(start), 'MMM d')}</h1>
-        <p className="text-sm text-slate-500">
-          <span className="text-base font-semibold text-slate-900 tabular-nums">
+        <p className="text-sm text-brand-ink-500">
+          <span className="text-base font-semibold text-brand-ink-900 tabular-nums">
             {weekTotal.toFixed(2)}
           </span>{' '}
           hrs
@@ -46,17 +46,17 @@ export default async function WeekPage() {
           const day = byDay.get(d) ?? [];
           const total = day.reduce((s, e) => s + Number(e.hours ?? 0), 0);
           return (
-            <div key={d} className="rounded-xl border border-slate-200 bg-white p-3">
+            <div key={d} className="rounded-xl border border-brand-ink-200 bg-white p-3">
               <div className="flex items-center justify-between">
                 <span className="font-medium">
                   {dayOfWeekLabel(d)} {format(parseISO(d), 'M/d')}
                 </span>
-                <span className="tabular-nums text-sm text-slate-600">
+                <span className="tabular-nums text-sm text-brand-ink-600">
                   {total > 0 ? total.toFixed(2) + ' h' : '—'}
                 </span>
               </div>
               {day.length > 0 && (
-                <ul className="mt-1 flex flex-col gap-1 text-sm text-slate-600">
+                <ul className="mt-1 flex flex-col gap-1 text-sm text-brand-ink-600">
                   {day.map((e) => (
                     <li key={e.id} className="flex justify-between">
                       <span>

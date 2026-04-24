@@ -20,7 +20,7 @@ export default async function EditJobPage({
 
   return (
     <div className="mx-auto max-w-3xl p-6">
-      <Link href="/admin/jobs" className="text-sm text-slate-500 hover:underline">← Jobs</Link>
+      <Link href="/admin/jobs" className="text-sm text-brand-ink-500 hover:underline">← Jobs</Link>
       <h1 className="mb-4 mt-2 text-xl font-semibold">
         Job {job.data.job_code} — {job.data.description}
       </h1>

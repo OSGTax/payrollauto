@@ -68,7 +68,7 @@ export function VoiceInput({ onText }: { onText: (t: string) => void }) {
       type="button"
       onClick={toggle}
       className={`flex items-center justify-center gap-2 self-start rounded-full px-3 py-1 text-sm font-medium ${
-        listening ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'
+        listening ? 'bg-red-100 text-red-700' : 'bg-brand-ink-100 text-brand-ink-700'
       }`}
     >
       {listening ? <Square size={16} /> : <Mic size={16} />}

@@ -33,7 +33,7 @@ export function PhotoUploader({ employeeId, empCode }: { employeeId: string; emp
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3">
+    <div className="flex flex-col gap-3 rounded-xl border border-brand-ink-200 bg-white p-3">
       <div className="flex gap-2 text-sm">
         <label className="flex items-center gap-1">
           <input type="radio" checked={kind === 'job'} onChange={() => setKind('job')} /> Job photo
@@ -47,9 +47,9 @@ export function PhotoUploader({ employeeId, empCode }: { employeeId: string; emp
         placeholder="Caption (optional)"
         value={caption}
         onChange={(e) => setCaption(e.target.value)}
-        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+        className="rounded-lg border border-brand-ink-200 bg-white px-3 py-2 text-sm"
       />
-      <label className="flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-3 font-medium text-white">
+      <label className="flex items-center justify-center gap-2 rounded-lg bg-brand-yellow-400 hover:bg-brand-yellow-500 px-4 py-3 font-medium text-brand-ink-900">
         <Camera size={18} />
         <span>{pending ? 'Uploading…' : 'Take / choose photo'}</span>
         <input

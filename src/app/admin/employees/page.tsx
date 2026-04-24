@@ -12,13 +12,13 @@ export default async function EmployeesPage() {
     <div className="mx-auto max-w-5xl p-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Employees</h1>
-        <Link href="/admin/employees/new" className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white">
+        <Link href="/admin/employees/new" className="rounded-lg bg-brand-yellow-400 hover:bg-brand-yellow-500 px-3 py-2 text-sm font-medium text-brand-ink-900">
           + Add employee
         </Link>
       </div>
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <div className="overflow-hidden rounded-lg border border-brand-ink-200 bg-white">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <thead className="bg-brand-ink-50 text-left text-xs uppercase text-brand-ink-500">
             <tr>
               <th className="px-3 py-2">Code</th>
               <th className="px-3 py-2">Name</th>
@@ -29,7 +29,7 @@ export default async function EmployeesPage() {
               <th />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="divide-y divide-brand-ink-200">
             {emps?.map((e) => (
               <tr key={e.id}>
                 <td className="px-3 py-2 font-mono">{e.emp_code}</td>
@@ -38,12 +38,12 @@ export default async function EmployeesPage() {
                 <td className="px-3 py-2">{e.department ?? '—'}</td>
                 <td className="px-3 py-2">{e.default_class ?? '—'}</td>
                 <td className="px-3 py-2">
-                  <span className={e.active ? 'text-emerald-600' : 'text-slate-400'}>
+                  <span className={e.active ? 'text-emerald-600' : 'text-brand-ink-300'}>
                     {e.active ? 'Active' : 'Inactive'}
                   </span>
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <Link href={`/admin/employees/${e.id}`} className="text-slate-600 hover:underline">
+                  <Link href={`/admin/employees/${e.id}`} className="text-brand-ink-600 hover:underline">
                     Edit
                   </Link>
                 </td>

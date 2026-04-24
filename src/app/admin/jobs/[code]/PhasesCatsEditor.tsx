@@ -57,24 +57,24 @@ export function PhasesCatsEditor({
   return (
     <section className="mt-8">
       <h2 className="mb-2 font-semibold">Phases &amp; categories</h2>
-      <div className="mb-4 flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white p-3">
+      <div className="mb-4 flex flex-wrap gap-2 rounded-lg border border-brand-ink-200 bg-white p-3">
         <input
           placeholder="Phase code (≤4)"
           maxLength={4}
           value={newPhase.code}
           onChange={(e) => setNewPhase({ ...newPhase, code: e.target.value })}
-          className="rounded border border-slate-300 px-2 py-1 text-sm"
+          className="rounded border border-brand-ink-200 px-2 py-1 text-sm"
         />
         <input
           placeholder="Description"
           value={newPhase.desc}
           onChange={(e) => setNewPhase({ ...newPhase, desc: e.target.value })}
-          className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
+          className="flex-1 rounded border border-brand-ink-200 px-2 py-1 text-sm"
         />
         <button
           onClick={addPhase}
           disabled={pending}
-          className="rounded bg-slate-900 px-3 py-1 text-sm text-white"
+          className="rounded bg-brand-yellow-400 hover:bg-brand-yellow-500 px-3 py-1 text-sm text-brand-ink-900"
         >
           + Phase
         </button>
@@ -85,7 +85,7 @@ export function PhasesCatsEditor({
           const phaseCats = cats.filter((c) => c.phase_code === p.phase_code);
           const val = newCat[p.phase_code] ?? { code: '', desc: '' };
           return (
-            <div key={p.phase_code} className="rounded-lg border border-slate-200 bg-white p-3">
+            <div key={p.phase_code} className="rounded-lg border border-brand-ink-200 bg-white p-3">
               <div className="flex items-center justify-between">
                 <p className="font-medium">
                   <span className="font-mono">{p.phase_code}</span> — {p.description}
@@ -122,7 +122,7 @@ export function PhasesCatsEditor({
                   onChange={(e) =>
                     setNewCat({ ...newCat, [p.phase_code]: { ...val, code: e.target.value } })
                   }
-                  className="rounded border border-slate-300 px-2 py-1 text-sm"
+                  className="rounded border border-brand-ink-200 px-2 py-1 text-sm"
                 />
                 <input
                   placeholder="Description"
@@ -130,12 +130,12 @@ export function PhasesCatsEditor({
                   onChange={(e) =>
                     setNewCat({ ...newCat, [p.phase_code]: { ...val, desc: e.target.value } })
                   }
-                  className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
+                  className="flex-1 rounded border border-brand-ink-200 px-2 py-1 text-sm"
                 />
                 <button
                   onClick={() => addCat(p.phase_code)}
                   disabled={pending}
-                  className="rounded bg-slate-900 px-3 py-1 text-sm text-white"
+                  className="rounded bg-brand-yellow-400 hover:bg-brand-yellow-500 px-3 py-1 text-sm text-brand-ink-900"
                 >
                   + Category
                 </button>

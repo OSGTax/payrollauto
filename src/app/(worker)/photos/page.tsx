@@ -20,14 +20,14 @@ export default async function PhotosPage() {
       {photos && photos.length > 0 ? (
         <ul className="mt-5 grid grid-cols-3 gap-2">
           {photos.map((p) => (
-            <li key={p.id} className="aspect-square overflow-hidden rounded-lg bg-slate-200">
+            <li key={p.id} className="aspect-square overflow-hidden rounded-lg bg-brand-ink-200">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`/api/photo/${p.id}`} alt={p.caption ?? p.kind} className="h-full w-full object-cover" />
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-4 text-sm text-slate-500">No photos yet.</p>
+        <p className="mt-4 text-sm text-brand-ink-500">No photos yet.</p>
       )}
     </div>
   );

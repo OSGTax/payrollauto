@@ -76,7 +76,7 @@ export function EntriesTable({ rows }: { rows: Row[] }) {
             placeholder="Note for manager (optional)"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="flex-1 min-w-[200px] rounded border border-slate-300 bg-white px-2 py-1"
+            className="flex-1 min-w-[200px] rounded border border-brand-ink-200 bg-white px-2 py-1"
           />
           <button
             onClick={pushBack}
@@ -87,15 +87,15 @@ export function EntriesTable({ rows }: { rows: Row[] }) {
           </button>
           <button
             onClick={() => setSelected(new Set())}
-            className="text-xs text-slate-600 hover:underline"
+            className="text-xs text-brand-ink-600 hover:underline"
           >
             Clear
           </button>
         </div>
       )}
-      <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded-lg border border-brand-ink-200 bg-white">
         <table className="w-full text-xs">
-          <thead className="bg-slate-50 text-left uppercase text-slate-500">
+          <thead className="bg-brand-ink-50 text-left uppercase text-brand-ink-500">
             <tr>
               <th className="w-8 px-2 py-2">
                 <input
@@ -119,7 +119,7 @@ export function EntriesTable({ rows }: { rows: Row[] }) {
               <th />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="divide-y divide-brand-ink-200">
             {rows.map((r) => {
               const canSelect = r.status === 'approved';
               return (
@@ -164,8 +164,8 @@ export function EntriesTable({ rows }: { rows: Row[] }) {
                         r.status === 'approved'
                           ? 'text-emerald-600'
                           : r.status === 'exported'
-                          ? 'text-slate-400'
-                          : 'text-slate-900'
+                          ? 'text-brand-ink-300'
+                          : 'text-brand-ink-900'
                       }
                     >
                       {r.status}
@@ -186,7 +186,7 @@ export function EntriesTable({ rows }: { rows: Row[] }) {
                   <td className="px-2 py-1.5 text-right">
                     <Link
                       href={`/admin/entries/${r.id}`}
-                      className="text-slate-600 hover:underline"
+                      className="text-brand-ink-600 hover:underline"
                     >
                       Edit
                     </Link>

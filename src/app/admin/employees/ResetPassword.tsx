@@ -28,16 +28,16 @@ export function ResetPassword({ employeeId }: { employeeId: string }) {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="New password"
-        className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2"
+        className="flex-1 rounded-lg border border-brand-ink-200 bg-white px-3 py-2"
       />
       <button
         onClick={submit}
         disabled={pending}
-        className="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white disabled:opacity-50"
+        className="rounded-lg bg-brand-yellow-400 hover:bg-brand-yellow-500 px-4 py-2 font-medium text-brand-ink-900 disabled:opacity-50"
       >
         {pending ? 'Resetting…' : 'Reset'}
       </button>
-      {status && <p className="self-center text-sm text-slate-600">{status}</p>}
+      {status && <p className="self-center text-sm text-brand-ink-600">{status}</p>}
     </div>
   );
 }

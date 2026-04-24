@@ -72,15 +72,15 @@ export function ClockPanel({ employee, openEntry, jobs }: Props) {
     const startedAt = openEntry.start_time?.slice(0, 5) ?? '--:--';
     return (
       <div className="flex flex-col items-center gap-6 pt-8 text-center">
-        <p className="text-sm uppercase tracking-wide text-slate-500">Clocked in</p>
+        <p className="text-sm uppercase tracking-wide text-brand-ink-500">Clocked in</p>
         <p className="text-5xl font-bold tabular-nums">{startedAt}</p>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-brand-ink-600">
           {openEntry.job} · {openEntry.phase} · {openEntry.cat}
         </p>
         <button
           onClick={handleClockOut}
           disabled={pending}
-          className="clock-btn flex h-48 w-48 items-center justify-center rounded-full bg-red-600 text-2xl font-bold text-white shadow-lg active:scale-95 disabled:opacity-50"
+          className="clock-btn flex h-48 w-48 items-center justify-center rounded-full bg-red-600 text-2xl font-bold text-white shadow-lg ring-4 ring-brand-yellow-400 ring-offset-4 ring-offset-brand-ink-50 active:scale-95 disabled:opacity-50"
         >
           {pending ? 'Saving…' : 'Clock out'}
         </button>
@@ -91,12 +91,12 @@ export function ClockPanel({ employee, openEntry, jobs }: Props) {
 
   return (
     <div className="flex flex-col items-center gap-6 pt-2 text-center">
-      <p className="text-sm uppercase tracking-wide text-slate-500">
+      <p className="text-sm uppercase tracking-wide text-brand-ink-500">
         {format(new Date(), 'EEEE, MMM d')}
       </p>
       <p className="text-lg">Hi {employee.first_name}</p>
 
-      <div className="w-full rounded-xl border border-slate-200 bg-white p-3">
+      <div className="w-full rounded-xl border border-brand-ink-200 bg-white p-3">
         <JobPicker
           jobs={jobs}
           value={{ job: pickedJob, phase: pickedPhase, cat: pickedCat }}
@@ -111,7 +111,7 @@ export function ClockPanel({ employee, openEntry, jobs }: Props) {
       <button
         onClick={handleClockIn}
         disabled={pending || !pickedJob || !pickedPhase || !pickedCat}
-        className="clock-btn flex h-48 w-48 items-center justify-center rounded-full bg-emerald-600 text-2xl font-bold text-white shadow-lg active:scale-95 disabled:opacity-50"
+        className="clock-btn flex h-48 w-48 items-center justify-center rounded-full bg-emerald-600 text-2xl font-bold text-white shadow-lg ring-4 ring-brand-yellow-400 ring-offset-4 ring-offset-brand-ink-50 active:scale-95 disabled:opacity-50"
       >
         {pending ? 'Saving…' : 'Clock in'}
       </button>
