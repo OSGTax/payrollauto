@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { format, parseISO } from 'date-fns';
 import { pushBackEntries } from './actions';
+import { formatTime12h } from '@/lib/time';
 
 type Row = {
   id: string;
@@ -143,8 +144,7 @@ export function EntriesTable({ rows }: { rows: Row[] }) {
                     {r.employees?.emp_code}
                   </td>
                   <td className="px-2 py-1.5 tabular-nums">
-                    {r.start_time?.slice(0, 5) ?? '--'}–
-                    {r.end_time?.slice(0, 5) ?? '--'}
+                    {formatTime12h(r.start_time)}–{formatTime12h(r.end_time)}
                   </td>
                   <td className="px-2 py-1.5 tabular-nums">
                     {Number(r.hours).toFixed(2)}

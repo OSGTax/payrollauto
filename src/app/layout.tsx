@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist } from 'next/font/google';
+import { ToastProvider } from '@/components/Toast';
+import { InstallPrompt } from '@/components/InstallPrompt';
 import './globals.css';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
@@ -28,8 +30,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-brand-ink-50 text-brand-ink-900">
-        {children}
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <ToastProvider>
+          {children}
+          <InstallPrompt />
+        </ToastProvider>
       </body>
     </html>
   );

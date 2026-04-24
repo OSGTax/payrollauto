@@ -6,6 +6,7 @@ import { approveEntries, overrideEntry } from './actions';
 import type { Job } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { dayOfWeekLabel } from '@/lib/week';
+import { formatTime12h } from '@/lib/time';
 
 type Row = {
   id: string;
@@ -270,7 +271,7 @@ function EntryRow({
           aria-label="Select entry"
         />
         <span className="w-24 tabular-nums text-brand-ink-600">
-          {row.start_time?.slice(0, 5) ?? '--'}–{row.end_time?.slice(0, 5) ?? '--'}
+          {formatTime12h(row.start_time)}–{formatTime12h(row.end_time)}
         </span>
         <span className="w-16 tabular-nums text-right font-medium">
           {Number(row.hours).toFixed(2)}h

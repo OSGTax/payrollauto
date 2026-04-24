@@ -1,7 +1,10 @@
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentEmployee } from '@/lib/session';
 import { isoWeekStart, weekDays, isoDate, dayOfWeekLabel } from '@/lib/week';
+import { formatTime12h } from '@/lib/time';
 import { format, parseISO } from 'date-fns';
+
+const REGULAR_WEEK_HOURS = 40;
 
 export default async function WeekPage() {
   const emp = await getCurrentEmployee();
@@ -30,6 +33,12 @@ export default async function WeekPage() {
   const weekTotal =
     entries?.reduce((sum, e) => sum + Number(e.hours ?? 0), 0) ?? 0;
 
+  const regularHours = Math.min(weekTotal, REGULAR_WEEK_HOURS);
+  const otHours = Math.max(0, weekTotal - REGULAR_WEEK_HOURS);
+  const regularPct = Math.min(100, (regularHours / REGULAR_WEEK_HOURS) * 100);
+  // Cap OT fill visually at an additional 25% of the bar so extreme OT doesn't blow out the layout.
+  const otPct = Math.min(25, (otHours / REGULAR_WEEK_HOURS) * 100);
+
   return (
     <div className="mx-auto max-w-xl p-4">
       <div className="mb-3 flex items-end justify-between">
@@ -41,7 +50,15 @@ export default async function WeekPage() {
           hrs
         </p>
       </div>
-      <div className="flex flex-col gap-2">
+
+      <WeekProgress
+        weekTotal={weekTotal}
+        regularPct={regularPct}
+        otPct={otPct}
+        otHours={otHours}
+      />
+
+      <div className="mt-4 flex flex-col gap-2">
         {days.map((d) => {
           const day = byDay.get(d) ?? [];
           const total = day.reduce((s, e) => s + Number(e.hours ?? 0), 0);
@@ -60,8 +77,8 @@ export default async function WeekPage() {
                   {day.map((e) => (
                     <li key={e.id} className="flex justify-between">
                       <span>
-                        {e.start_time?.slice(0, 5) ?? ''}
-                        {e.end_time ? ' – ' + e.end_time.slice(0, 5) : ' · open'}
+                        {formatTime12h(e.start_time, '')}
+                        {e.end_time ? ' – ' + formatTime12h(e.end_time) : ' · open'}
                         {' · '}
                         {e.job ? `${e.job}.${e.phase}.${e.cat}` : typeLabel(e.type)}
                       </span>
@@ -73,6 +90,60 @@ export default async function WeekPage() {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function WeekProgress({
+  weekTotal,
+  regularPct,
+  otPct,
+  otHours,
+}: {
+  weekTotal: number;
+  regularPct: number;
+  otPct: number;
+  otHours: number;
+}) {
+  const hitFulltime = weekTotal >= REGULAR_WEEK_HOURS;
+  return (
+    <div className="rounded-xl border border-brand-ink-200 bg-white p-3">
+      <div className="mb-1 flex items-baseline justify-between text-xs text-brand-ink-500">
+        <span>
+          <span className="font-semibold text-brand-ink-900 tabular-nums">
+            {weekTotal.toFixed(2)}
+          </span>{' '}
+          / {REGULAR_WEEK_HOURS}h
+          {hitFulltime && (
+            <span className="ml-2 rounded-full bg-brand-yellow-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-brand-ink-800">
+              Full week
+            </span>
+          )}
+        </span>
+        {otHours > 0 && (
+          <span className="tabular-nums font-medium text-red-600">
+            +{otHours.toFixed(2)}h OT
+          </span>
+        )}
+      </div>
+      <div
+        className="relative h-3 w-full overflow-hidden rounded-full bg-brand-ink-100"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={REGULAR_WEEK_HOURS}
+        aria-valuenow={Math.min(weekTotal, REGULAR_WEEK_HOURS)}
+      >
+        <div
+          className="absolute inset-y-0 left-0 bg-brand-yellow-400 transition-[width] duration-500 ease-out"
+          style={{ width: `${regularPct}%` }}
+        />
+        {otHours > 0 && (
+          <div
+            className="absolute inset-y-0 bg-red-500 transition-[width] duration-500 ease-out"
+            style={{ left: `${regularPct}%`, width: `${otPct}%` }}
+          />
+        )}
       </div>
     </div>
   );

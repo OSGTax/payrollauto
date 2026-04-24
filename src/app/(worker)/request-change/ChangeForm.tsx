@@ -6,22 +6,24 @@ import { VoiceInput } from '@/components/VoiceInput';
 import { submitChange } from './actions';
 import type { TimeEntry } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
+import { formatTime12h } from '@/lib/time';
+import { useToast } from '@/components/Toast';
 
 export function ChangeForm({ entries }: { entries: TimeEntry[] }) {
   const router = useRouter();
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
   const [entryId, setEntryId] = useState(entries[0]?.id ?? '');
   const [message, setMessage] = useState('');
-  const [error, setError] = useState<string | null>(null);
 
   function submit() {
-    setError(null);
-    if (!entryId) { setError('Pick an entry.'); return; }
-    if (!message.trim()) { setError('Say what needs to change.'); return; }
+    if (!entryId) { toast.error('Pick an entry first.'); return; }
+    if (!message.trim()) { toast.error('Say what needs to change.'); return; }
     startTransition(async () => {
       const res = await submitChange({ entryId, message });
-      if (res?.error) setError(res.error);
+      if (res?.error) toast.error('Could not send', res.error);
       else {
+        toast.success('Change request sent', 'Your manager will review it.');
         setMessage('');
         router.refresh();
       }
@@ -41,7 +43,7 @@ export function ChangeForm({ entries }: { entries: TimeEntry[] }) {
           {entries.map((e) => (
             <option key={e.id} value={e.id}>
               {format(parseISO(e.date), 'EEE M/d')} ·{' '}
-              {e.start_time?.slice(0, 5) ?? '--'}-{e.end_time?.slice(0, 5) ?? '--'} ·{' '}
+              {formatTime12h(e.start_time)}–{formatTime12h(e.end_time)} ·{' '}
               {Number(e.hours).toFixed(2)}h ·{' '}
               {e.job ? `${e.job}.${e.phase}.${e.cat}` : 'Other'}
             </option>
@@ -60,8 +62,6 @@ export function ChangeForm({ entries }: { entries: TimeEntry[] }) {
         />
         <VoiceInput onText={(t) => setMessage((m) => (m ? m + ' ' + t : t))} />
       </label>
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
 
       <button
         onClick={submit}

@@ -3,11 +3,27 @@
 :root {
   --background: #fafaf9;
   --foreground: #111111;
+  --surface: #ffffff;
+  --surface-muted: #f5f5f4;
+  --border-muted: #e7e5e4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1a1a1a;
+    --foreground: #f5f5f4;
+    --surface: #2a2a2a;
+    --surface-muted: #3a3a3a;
+    --border-muted: #3a3a3a;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border-muted: var(--border-muted);
   --font-sans: var(--font-geist-sans);
 
   /* AJK brand palette — construction yellow + ink. */
@@ -56,4 +72,37 @@ button, a.btn {
     #111111 14px 22px
   );
   height: 4px;
+}
+
+/* Button press pulse, used on the large clock in/out circles. */
+@keyframes clock-pulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+.clock-pulse { animation: clock-pulse .28s ease-out; }
+
+/* Breathing ring so clocked-in workers see the app is alive. */
+@keyframes clock-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 194, 14, 0.55); }
+  50%      { box-shadow: 0 0 0 12px rgba(255, 194, 14, 0);    }
+}
+.clock-breathe { animation: clock-breathe 2.4s ease-out infinite; }
+
+/* Toast slide-in. */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Shimmer for skeleton placeholders. */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-muted) 0px, var(--border-muted) 200px, var(--surface-muted) 400px);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: 0.5rem;
 }

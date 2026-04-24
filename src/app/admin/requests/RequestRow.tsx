@@ -5,6 +5,7 @@ import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { resolveRequest } from './actions';
 import { format, parseISO } from 'date-fns';
+import { formatTime12h } from '@/lib/time';
 
 type Row = {
   id: string;
@@ -51,7 +52,7 @@ export function RequestRow({ row }: { row: Row }) {
             {row.entry && (
               <>
                 Entry {format(parseISO(row.entry.date), 'M/d')}{' '}
-                {row.entry.start_time?.slice(0, 5) ?? '--'}–{row.entry.end_time?.slice(0, 5) ?? '--'} ·{' '}
+                {formatTime12h(row.entry.start_time)}–{formatTime12h(row.entry.end_time)} ·{' '}
                 {Number(row.entry.hours).toFixed(2)}h
               </>
             )}
