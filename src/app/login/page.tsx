@@ -19,7 +19,7 @@ async function LoginForm({ searchParams }: { searchParams: Promise<{ error?: str
           <p className="text-base font-semibold tracking-wide">
             <span>Clock in </span>
             <span className="text-brand-yellow-400">→</span>
-            <span className="ml-1 text-brand-yellow-400">$Get paid!$</span>
+            <span className="ml-1 text-brand-yellow-400">Get paid! 💰💵</span>
           </p>
         </div>
         <div className="brand-stripe" aria-hidden />
