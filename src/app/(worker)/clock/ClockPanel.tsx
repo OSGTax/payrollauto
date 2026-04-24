@@ -2,21 +2,24 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin, Briefcase } from 'lucide-react';
+import { MapPin, Briefcase, Coffee, Shuffle, X } from 'lucide-react';
 import { JobPicker } from '@/components/JobPicker';
 import { useToast } from '@/components/Toast';
 import { formatTime12h } from '@/lib/time';
 import { parseEasternWallClock } from '@/lib/tz';
-import { clockIn, clockOut } from './actions';
+import { clockIn, clockOut, takeBreak, switchWorkCode } from './actions';
 import type { Job, TimeEntry } from '@/lib/types';
 import type { OpenEntryDetail } from './page';
 import { format } from 'date-fns';
+
+type Codes = { job: string; phase: string; cat: string };
 
 type Props = {
   employee: { id: string; first_name: string };
   openEntry: TimeEntry | null;
   openEntryDetail?: OpenEntryDetail | null;
   jobs: Job[];
+  lastCodes?: Codes | null;
 };
 
 type GeoState = { status: 'idle' | 'locating' | 'ok' | 'denied' | 'unavailable'; lat?: number; lng?: number };
@@ -59,15 +62,19 @@ function startMsFromEntry(entry: TimeEntry): number {
   return parseEasternWallClock(entry.date, t);
 }
 
-export function ClockPanel({ employee, openEntry, openEntryDetail, jobs }: Props) {
+export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCodes }: Props) {
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
-  const [pickedJob, setPickedJob] = useState<string | null>(null);
-  const [pickedPhase, setPickedPhase] = useState<string | null>(null);
-  const [pickedCat, setPickedCat] = useState<string | null>(null);
+  const [pickedJob, setPickedJob] = useState<string | null>(lastCodes?.job ?? null);
+  const [pickedPhase, setPickedPhase] = useState<string | null>(lastCodes?.phase ?? null);
+  const [pickedCat, setPickedCat] = useState<string | null>(lastCodes?.cat ?? null);
   const [geo, setGeo] = useState<GeoState>({ status: 'idle' });
   const [pulseKey, setPulseKey] = useState(0);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [switchJob, setSwitchJob] = useState<string | null>(null);
+  const [switchPhase, setSwitchPhase] = useState<string | null>(null);
+  const [switchCat, setSwitchCat] = useState<string | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
   const isClockedIn = !!openEntry;
@@ -148,6 +155,63 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs }: Props
     });
   }
 
+  async function handleTakeBreak() {
+    if (!openEntry) return;
+    buzz(30);
+    startTransition(async () => {
+      const res = await takeBreak(openEntry.id);
+      if (res?.error) {
+        toast.error('Could not start break', res.error);
+        return;
+      }
+      toast.success('Enjoy your break', `Total so far: ${elapsed}`);
+      router.refresh();
+    });
+  }
+
+  function openSwitcher() {
+    if (!openEntry) return;
+    setSwitchJob(openEntry.job ?? null);
+    setSwitchPhase(openEntry.phase ?? null);
+    setSwitchCat(openEntry.cat ?? null);
+    setSwitcherOpen(true);
+  }
+
+  async function handleSwitchWorkCode() {
+    if (!openEntry) return;
+    if (!switchJob || !switchPhase || !switchCat) {
+      toast.error('Pick a job, phase, and category first.');
+      return;
+    }
+    const sameAsCurrent =
+      switchJob === openEntry.job &&
+      switchPhase === openEntry.phase &&
+      switchCat === openEntry.cat;
+    if (sameAsCurrent) {
+      setSwitcherOpen(false);
+      return;
+    }
+    buzz(30);
+    const coords = await geolocate();
+    startTransition(async () => {
+      const res = await switchWorkCode({
+        entryId: openEntry.id,
+        job: switchJob,
+        phase: switchPhase,
+        cat: switchCat,
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
+      });
+      if (res?.error) {
+        toast.error('Could not switch code', res.error);
+        return;
+      }
+      toast.success('Switched work code', `Now on ${switchJob} · ${switchPhase} · ${switchCat}`);
+      setSwitcherOpen(false);
+      router.refresh();
+    });
+  }
+
   if (isClockedIn && openEntry) {
     const startedAtLabel = formatTime12h(openEntry.start_time, '--:-- --');
     return (
@@ -164,6 +228,63 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs }: Props
         </p>
 
         <JobCostCard entry={openEntry} detail={openEntryDetail ?? null} />
+
+        {switcherOpen && (
+          <div className="w-full rounded-xl border border-brand-yellow-400 bg-white p-3 text-left shadow-sm">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-semibold text-brand-ink-900">Switch to a new code</p>
+              <button
+                type="button"
+                onClick={() => setSwitcherOpen(false)}
+                aria-label="Cancel"
+                className="rounded p-1 text-brand-ink-500 hover:text-brand-ink-900"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <JobPicker
+              jobs={jobs}
+              value={{ job: switchJob, phase: switchPhase, cat: switchCat }}
+              onChange={(v) => {
+                setSwitchJob(v.job);
+                setSwitchPhase(v.phase);
+                setSwitchCat(v.cat);
+              }}
+            />
+            <button
+              type="button"
+              onClick={handleSwitchWorkCode}
+              disabled={pending || !switchJob || !switchPhase || !switchCat}
+              className="mt-3 w-full rounded-lg bg-brand-yellow-400 px-4 py-2 text-sm font-semibold text-brand-ink-900 hover:bg-brand-yellow-500 disabled:opacity-50"
+            >
+              {pending ? 'Switching…' : 'Switch now'}
+            </button>
+            <p className="mt-2 text-center text-xs text-brand-ink-500">
+              Closes this entry and opens a new one at the current time.
+            </p>
+          </div>
+        )}
+
+        <div className="flex w-full items-stretch justify-center gap-2">
+          <button
+            type="button"
+            onClick={handleTakeBreak}
+            disabled={pending || switcherOpen}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-brand-ink-300 bg-white px-3 py-2 text-sm font-medium text-brand-ink-700 hover:bg-brand-ink-100 disabled:opacity-50"
+          >
+            <Coffee size={16} />
+            Take a break
+          </button>
+          <button
+            type="button"
+            onClick={openSwitcher}
+            disabled={pending || switcherOpen}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-brand-yellow-400 bg-brand-yellow-50 px-3 py-2 text-sm font-medium text-brand-ink-800 hover:bg-brand-yellow-100 disabled:opacity-50"
+          >
+            <Shuffle size={16} />
+            Switch code
+          </button>
+        </div>
 
         <button
           key={pulseKey}

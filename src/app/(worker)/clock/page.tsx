@@ -9,7 +9,7 @@ export default async function ClockPage() {
   const supabase = await createClient();
   const today = easternDate();
 
-  const [openEntryRes, jobsRes] = await Promise.all([
+  const [openEntryRes, jobsRes, lastCodedRes] = await Promise.all([
     supabase
       .from('time_entries')
       .select('*')
@@ -21,6 +21,14 @@ export default async function ClockPage() {
       .limit(1)
       .maybeSingle(),
     supabase.from('jobs').select('*').eq('active', true).order('job_code'),
+    supabase
+      .from('time_entries')
+      .select('job, phase, cat')
+      .eq('employee_id', emp.id)
+      .not('job', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const openEntry = openEntryRes.data ?? null;
@@ -54,6 +62,8 @@ export default async function ClockPage() {
     };
   }
 
+  const lastCodes = lastCodedRes.data ?? null;
+
   return (
     <div className="mx-auto max-w-xl p-4">
       <ClockPanel
@@ -61,6 +71,11 @@ export default async function ClockPage() {
         openEntry={openEntry}
         openEntryDetail={openEntryDetail}
         jobs={jobsRes.data ?? []}
+        lastCodes={
+          lastCodes && lastCodes.job && lastCodes.phase && lastCodes.cat
+            ? { job: lastCodes.job, phase: lastCodes.phase, cat: lastCodes.cat }
+            : null
+        }
       />
     </div>
   );
