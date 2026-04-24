@@ -1,6 +1,6 @@
-# PayrollAuto
+# AJK Time
 
-Construction timekeeping app that feeds **ComputerEase** payroll.
+Construction timekeeping app for **AJK Site Development Inc.** that feeds **ComputerEase** payroll.
 
 Workers clock in/out from their phone, pick a job, and submit. The back end
 enriches each entry with the department, worker class, WC code, hours type,

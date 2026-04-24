@@ -1,7 +1,7 @@
 {
-  "name": "PayrollAuto Time",
-  "short_name": "Time",
-  "description": "Construction timekeeping",
+  "name": "AJK Time",
+  "short_name": "AJK Time",
+  "description": "AJK Site Development — timekeeping for the field.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

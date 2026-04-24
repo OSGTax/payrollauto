@@ -6,13 +6,14 @@ import './globals.css';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 
-const companyName = process.env.NEXT_PUBLIC_COMPANY_NAME ?? 'PayrollAuto';
+const companyName = process.env.NEXT_PUBLIC_COMPANY_NAME ?? 'AJK Site Development';
+const appShortName = 'AJK Time';
 
 export const metadata: Metadata = {
-  title: companyName + ' Time',
-  description: 'Construction timekeeping',
+  title: appShortName,
+  description: `${companyName} — timekeeping for the field.`,
   manifest: '/manifest.webmanifest',
-  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: companyName },
+  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: appShortName },
   icons: {
     icon: [{ url: '/icons/icon-192.png', sizes: '192x192' }],
     apple: [{ url: '/icons/icon-192.png' }],

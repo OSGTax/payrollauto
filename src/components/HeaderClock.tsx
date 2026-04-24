@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react';
 
 function formatNow() {
   const d = new Date();
-  const hh = String(d.getHours()).padStart(2, '0');
+  const h24 = d.getHours();
+  const period = h24 >= 12 ? 'PM' : 'AM';
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
   const mm = String(d.getMinutes()).padStart(2, '0');
   const ss = String(d.getSeconds()).padStart(2, '0');
-  return `${hh}:${mm}:${ss}`;
+  return `${h12}:${mm}:${ss} ${period}`;
 }
 
 export function HeaderClock() {

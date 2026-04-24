@@ -5,14 +5,14 @@ import { logout } from '@/app/login/actions';
 import type { Employee } from '@/lib/types';
 
 export function AppHeader({ employee, children }: { employee: Employee; children?: React.ReactNode }) {
-  const companyName = process.env.NEXT_PUBLIC_COMPANY_NAME ?? 'PayrollAuto';
+  const appShortName = 'AJK Time';
   return (
     <div className="sticky top-0 z-10">
       <header className="flex items-center justify-between gap-3 bg-brand-ink-900 px-4 py-2 text-brand-ink-50">
         <Link href="/" className="flex items-center gap-2">
           <LogoMark className="h-8 w-8" />
           <span className="hidden text-sm font-semibold tracking-wide text-brand-yellow-400 sm:inline">
-            {companyName}
+            {appShortName}
           </span>
         </Link>
         {children}

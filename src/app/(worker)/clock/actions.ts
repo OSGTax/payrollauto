@@ -4,8 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentEmployee } from '@/lib/session';
 import { enrichEntry, computeHours } from '@/lib/enrich';
-import { isoDate } from '@/lib/week';
-import { format } from 'date-fns';
+import { easternDateTime } from '@/lib/tz';
 
 export async function clockIn(input: {
   job: string;
@@ -32,11 +31,11 @@ export async function clockIn(input: {
         .maybeSingle()
     : { data: null };
 
-  const now = new Date();
+  const { date, time } = easternDateTime();
   const enriched = enrichEntry(
     {
-      date: isoDate(now),
-      start_time: format(now, 'HH:mm:ss'),
+      date,
+      start_time: time,
       hours: 0,
       type: 1,
       job: input.job,
@@ -76,7 +75,7 @@ export async function clockOut(input: {
   if (!entry) return { error: 'Entry not found.' };
 
   const now = new Date();
-  const endTime = format(now, 'HH:mm:ss');
+  const { time: endTime } = easternDateTime(now);
   const hours = computeHours(entry.start_time!, endTime);
 
   const { error } = await supabase
