@@ -14,9 +14,13 @@ async function LoginForm({ searchParams }: { searchParams: Promise<{ error?: str
   return (
     <div className="flex flex-1 flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-brand-ink-200">
-        <div className="flex flex-col items-center gap-3 bg-brand-ink-900 px-6 pt-6 pb-5 text-brand-ink-50">
-          <LogoMark variant="full" className="h-20 w-auto" />
-          <p className="text-sm text-brand-ink-300">Sign in to log your time.</p>
+        <div className="flex flex-col items-center gap-3 bg-brand-ink-900 px-6 pt-8 pb-5 text-brand-ink-50">
+          <LogoMark variant="full" className="h-36 w-auto sm:h-40" />
+          <p className="text-base font-semibold tracking-wide">
+            <span>Clock in </span>
+            <span className="text-brand-yellow-400">→</span>
+            <span className="ml-1 text-brand-yellow-400">$Get paid!$</span>
+          </p>
         </div>
         <div className="brand-stripe" aria-hidden />
         <form action={login} className="flex flex-col gap-3 p-6">
