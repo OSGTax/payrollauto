@@ -37,13 +37,22 @@ export function easternDate(d: Date = new Date()): string {
 /**
  * Given a date+time that represents an Eastern wall-clock (e.g. DB values
  * stored by easternDateTime), return the absolute Unix ms for that moment.
- * Handles DST transitions via Intl offset lookup.
+ * Handles DST transitions via a two-step offset refinement: the offset at
+ * the first guess is validated against the offset at the final candidate,
+ * which is necessary for wall-clock times that sit on either side of a DST flip.
  */
 export function parseEasternWallClock(dateStr: string, timeStr: string): number {
   const [y, mo, d] = dateStr.split('-').map(Number);
   const [h = 0, mi = 0, s = 0] = timeStr.split(':').map(Number);
   const asIfUtc = Date.UTC(y, mo - 1, d, h, mi, s);
-  return asIfUtc - easternOffsetMs(asIfUtc);
+
+  const offset1 = easternOffsetMs(asIfUtc);
+  const candidate = asIfUtc - offset1;
+
+  // The offset at the candidate moment might differ from the offset we guessed
+  // (true on DST-change mornings). If so, re-apply with the correct offset.
+  const offset2 = easternOffsetMs(candidate);
+  return offset2 === offset1 ? candidate : asIfUtc - offset2;
 }
 
 /** Eastern offset from UTC (ms) at a given instant. Negative for EDT/EST. */

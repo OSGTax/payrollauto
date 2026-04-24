@@ -1,15 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { APP_TZ } from '@/lib/tz';
 
-function formatNow() {
-  const d = new Date();
-  const h24 = d.getHours();
-  const period = h24 >= 12 ? 'PM' : 'AM';
-  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  const ss = String(d.getSeconds()).padStart(2, '0');
-  return `${h12}:${mm}:${ss} ${period}`;
+const formatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: APP_TZ,
+  hour: 'numeric',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: true,
+});
+
+function formatNow(): string {
+  // Intl returns "7:14:05 AM" — normalized across browsers.
+  return formatter.format(new Date());
 }
 
 export function HeaderClock() {

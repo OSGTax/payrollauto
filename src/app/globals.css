@@ -1,21 +1,14 @@
 @import "tailwindcss";
 
+/* Dark mode is intentionally off for now: the surface/card sweep isn't done,
+   so a dark root with light cards would look worse than a consistent light theme.
+   Keep these tokens available for a future dark-mode pass. */
 :root {
   --background: #fafaf9;
   --foreground: #111111;
   --surface: #ffffff;
   --surface-muted: #f5f5f4;
   --border-muted: #e7e5e4;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #1a1a1a;
-    --foreground: #f5f5f4;
-    --surface: #2a2a2a;
-    --surface-muted: #3a3a3a;
-    --border-muted: #3a3a3a;
-  }
 }
 
 @theme inline {

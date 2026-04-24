@@ -23,7 +23,7 @@ export default async function SetupPage({
     <div className="flex flex-1 flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-brand-ink-200">
         <div className="flex flex-col items-center gap-3 bg-brand-ink-900 px-6 pt-6 pb-5 text-brand-ink-50">
-          <LogoMark variant="full" className="h-16 w-auto" />
+          <LogoMark variant="full" priority className="h-16 w-auto" />
           <h1 className="text-xl font-semibold text-brand-yellow-400">First-time setup</h1>
           <p className="text-center text-sm text-brand-ink-300">
             Create the first administrator account. This page disables itself after one admin exists.

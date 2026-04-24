@@ -100,7 +100,11 @@ export async function clockOut(input: {
  * Close out the current entry without starting a new one — worker goes off the clock.
  * When they come back, the JobPicker pre-fills with the just-closed codes so one tap resumes.
  */
-export async function takeBreak(entryId: string) {
+export async function takeBreak(input: {
+  entryId: string;
+  lat: number | null;
+  lng: number | null;
+}) {
   const emp = await getCurrentEmployee();
   if (!emp) return { error: 'Not signed in.' };
   const supabase = await createClient();
@@ -108,7 +112,7 @@ export async function takeBreak(entryId: string) {
   const { data: entry } = await supabase
     .from('time_entries')
     .select('*')
-    .eq('id', entryId)
+    .eq('id', input.entryId)
     .maybeSingle();
   if (!entry) return { error: 'Entry not found.' };
 
@@ -121,11 +125,13 @@ export async function takeBreak(entryId: string) {
     .update({
       end_time: endTime,
       hours,
+      clock_out_lat: input.lat,
+      clock_out_lng: input.lng,
       status: 'submitted',
       edited_by: emp.id,
       edited_at: now.toISOString(),
     })
-    .eq('id', entryId);
+    .eq('id', input.entryId);
   if (error) return { error: error.message };
   revalidatePath('/clock');
   revalidatePath('/week');
@@ -164,6 +170,19 @@ export async function switchWorkCode(input: {
   const now = new Date();
   const { date, time } = easternDateTime(now);
   const hours = computeHours(current.start_time!, time);
+
+  // Snapshot the pre-close state so we can roll back if the new entry fails to insert.
+  // Supabase-js can't wrap two statements in a single DB transaction from the client,
+  // so this compensating rollback is the closest atomic-ish guarantee without an RPC.
+  const rollbackPatch = {
+    end_time: current.end_time,
+    hours: current.hours,
+    clock_out_lat: current.clock_out_lat,
+    clock_out_lng: current.clock_out_lng,
+    status: current.status,
+    edited_by: current.edited_by,
+    edited_at: current.edited_at,
+  };
 
   const { error: closeErr } = await supabase
     .from('time_entries')
@@ -213,7 +232,11 @@ export async function switchWorkCode(input: {
   );
 
   const { error: openErr } = await supabase.from('time_entries').insert(enriched);
-  if (openErr) return { error: openErr.message };
+  if (openErr) {
+    // New entry didn't land — reopen the original so the worker isn't silently clocked out.
+    await supabase.from('time_entries').update(rollbackPatch).eq('id', input.entryId);
+    return { error: openErr.message };
+  }
   revalidatePath('/clock');
   revalidatePath('/week');
   return { ok: true };

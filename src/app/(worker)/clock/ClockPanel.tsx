@@ -158,8 +158,13 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
   async function handleTakeBreak() {
     if (!openEntry) return;
     buzz(30);
+    const coords = await geolocate();
     startTransition(async () => {
-      const res = await takeBreak(openEntry.id);
+      const res = await takeBreak({
+        entryId: openEntry.id,
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
+      });
       if (res?.error) {
         toast.error('Could not start break', res.error);
         return;
