@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { LogoMark } from './LogoMark';
+import { HeaderClock } from './HeaderClock';
 import { logout } from '@/app/login/actions';
 import type { Employee } from '@/lib/types';
 
@@ -16,6 +17,7 @@ export function AppHeader({ employee, children }: { employee: Employee; children
         </Link>
         {children}
         <div className="flex items-center gap-3">
+          <HeaderClock />
           <span className="text-xs text-brand-ink-300">
             {employee.first_name} ·{' '}
             <span className="uppercase tracking-wide text-brand-yellow-400">{employee.role}</span>
