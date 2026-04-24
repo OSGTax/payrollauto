@@ -20,7 +20,7 @@ export function JobForm({ job }: { job?: Job }) {
   }
 
   return (
-    <form action={onSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4">
+    <form action={onSubmit} className="flex flex-col gap-3 rounded-lg border border-brand-ink-200 bg-white p-4">
       <Field label="Job code (max 10)">
         <input name="job_code" defaultValue={job?.job_code ?? ''} required maxLength={10} readOnly={!!job} className={inp} />
       </Field>
@@ -46,7 +46,7 @@ export function JobForm({ job }: { job?: Job }) {
         <input type="checkbox" name="active" defaultChecked={job?.active ?? true} /> Active
       </label>
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <button disabled={pending} className="mt-2 rounded-lg bg-slate-900 px-4 py-2 font-medium text-white disabled:opacity-50">
+      <button disabled={pending} className="mt-2 rounded-lg bg-brand-yellow-400 hover:bg-brand-yellow-500 px-4 py-2 font-medium text-brand-ink-900 disabled:opacity-50">
         {pending ? 'Saving…' : 'Save'}
       </button>
     </form>
@@ -54,12 +54,12 @@ export function JobForm({ job }: { job?: Job }) {
 }
 
 const inp =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base focus:border-slate-900 focus:outline-none read-only:bg-slate-50';
+  'w-full rounded-lg border border-brand-ink-200 bg-white px-3 py-2 text-base focus:border-brand-ink-900 focus:outline-none read-only:bg-brand-ink-50';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-xs font-medium text-slate-600">{label}</span>
+      <span className="text-xs font-medium text-brand-ink-600">{label}</span>
       {children}
     </label>
   );

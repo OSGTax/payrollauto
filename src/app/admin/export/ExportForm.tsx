@@ -24,18 +24,18 @@ export function ExportForm({ from, to }: { from: string; to: string }) {
   }).toString()}`;
 
   return (
-    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4">
+    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-brand-ink-200 bg-white p-4">
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-slate-500">From</span>
-        <input type="date" value={state.from} onChange={(e) => setState({ ...state, from: e.target.value })} className="rounded border border-slate-300 px-2 py-1" />
+        <span className="text-xs text-brand-ink-500">From</span>
+        <input type="date" value={state.from} onChange={(e) => setState({ ...state, from: e.target.value })} className="rounded border border-brand-ink-200 px-2 py-1" />
       </label>
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-slate-500">To</span>
-        <input type="date" value={state.to} onChange={(e) => setState({ ...state, to: e.target.value })} className="rounded border border-slate-300 px-2 py-1" />
+        <span className="text-xs text-brand-ink-500">To</span>
+        <input type="date" value={state.to} onChange={(e) => setState({ ...state, to: e.target.value })} className="rounded border border-brand-ink-200 px-2 py-1" />
       </label>
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-slate-500">Format</span>
-        <select value={state.format} onChange={(e) => setState({ ...state, format: e.target.value })} className="rounded border border-slate-300 px-2 py-1">
+        <span className="text-xs text-brand-ink-500">Format</span>
+        <select value={state.format} onChange={(e) => setState({ ...state, format: e.target.value })} className="rounded border border-brand-ink-200 px-2 py-1">
           <option value="comma">CSV (comma)</option>
           <option value="tab">TSV (tab)</option>
           <option value="fixed">Fixed-width</option>
@@ -49,12 +49,12 @@ export function ExportForm({ from, to }: { from: string; to: string }) {
         <input type="checkbox" checked={state.markExported} onChange={(e) => setState({ ...state, markExported: e.target.checked })} />
         Mark exported
       </label>
-      <button type="button" onClick={apply} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+      <button type="button" onClick={apply} className="rounded-lg border border-brand-ink-200 px-3 py-2 text-sm">
         Preview
       </button>
       <a
         href={downloadUrl}
-        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+        className="rounded-lg bg-brand-yellow-400 hover:bg-brand-yellow-500 px-4 py-2 text-sm font-medium text-brand-ink-900"
       >
         Download
       </a>

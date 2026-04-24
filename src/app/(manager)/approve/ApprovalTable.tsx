@@ -6,6 +6,7 @@ import { approveEntries, overrideEntry } from './actions';
 import type { Job } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { dayOfWeekLabel } from '@/lib/week';
+import { formatTime12h } from '@/lib/time';
 
 type Row = {
   id: string;
@@ -90,7 +91,7 @@ export function ApprovalTable({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-brand-ink-600">
           {selected.size} selected · {totalApproved} / {rows.length} approved
           {totalPending > 0 && ` · ${totalPending} pending`}
         </p>
@@ -152,14 +153,14 @@ function WorkerWeekCard({
   }
 
   return (
-    <details className="rounded-xl border border-slate-200 bg-white" open>
+    <details className="rounded-xl border border-brand-ink-200 bg-white" open>
       <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 p-3">
         <div>
           <p className="font-medium">
             {employee?.first_name} {employee?.last_name}{' '}
-            <span className="font-mono text-xs text-slate-500">{employee?.emp_code}</span>
+            <span className="font-mono text-xs text-brand-ink-500">{employee?.emp_code}</span>
           </p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-brand-ink-500">
             {weekTotal.toFixed(2)}h · {pendingCount} pending / {empRows.length} total
           </p>
         </div>
@@ -188,17 +189,17 @@ function WorkerWeekCard({
           const dayRows = byDay.get(d) ?? [];
           const dayTotal = dayRows.reduce((s, r) => s + Number(r.hours), 0);
           return (
-            <div key={d} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+            <div key={d} className="rounded-lg border border-brand-ink-200 bg-brand-ink-50 p-2">
               <div className="mb-1 flex items-center justify-between text-sm">
-                <span className="font-medium text-slate-700">
+                <span className="font-medium text-brand-ink-700">
                   {dayOfWeekLabel(d)} {format(parseISO(d), 'M/d')}
                 </span>
-                <span className="tabular-nums text-slate-600">
+                <span className="tabular-nums text-brand-ink-600">
                   {dayTotal > 0 ? `${dayTotal.toFixed(2)}h` : '—'}
                 </span>
               </div>
               {dayRows.length === 0 ? (
-                <p className="text-xs text-slate-400">No entries</p>
+                <p className="text-xs text-brand-ink-300">No entries</p>
               ) : (
                 <ul className="flex flex-col gap-1">
                   {dayRows.map((r) => (
@@ -251,7 +252,7 @@ function EntryRow({
   return (
     <li
       className={`rounded border p-2 text-sm ${
-        approved ? 'border-emerald-200 bg-emerald-50/50' : 'border-slate-200 bg-white'
+        approved ? 'border-emerald-200 bg-emerald-50/50' : 'border-brand-ink-200 bg-white'
       } ${selected ? 'ring-2 ring-emerald-400' : ''}`}
     >
       {row.pushed_back_at && (
@@ -269,8 +270,8 @@ function EntryRow({
           className="h-5 w-5"
           aria-label="Select entry"
         />
-        <span className="w-24 tabular-nums text-slate-600">
-          {row.start_time?.slice(0, 5) ?? '--'}–{row.end_time?.slice(0, 5) ?? '--'}
+        <span className="w-24 tabular-nums text-brand-ink-600">
+          {formatTime12h(row.start_time)}–{formatTime12h(row.end_time)}
         </span>
         <span className="w-16 tabular-nums text-right font-medium">
           {Number(row.hours).toFixed(2)}h
@@ -278,18 +279,18 @@ function EntryRow({
         <select
           value={job}
           onChange={(e) => setJob(e.target.value)}
-          className="rounded border border-slate-300 px-2 py-1 text-xs"
+          className="rounded border border-brand-ink-200 px-2 py-1 text-xs"
         >
           <option value="">—</option>
           {jobs.map((j) => (
             <option key={j.job_code} value={j.job_code}>{j.job_code}</option>
           ))}
         </select>
-        <span className="text-xs text-slate-500">{row.phase}.{row.cat}</span>
+        <span className="text-xs text-brand-ink-500">{row.phase}.{row.cat}</span>
         <select
           value={cls}
           onChange={(e) => setCls(e.target.value)}
-          className="rounded border border-slate-300 px-2 py-1 text-xs"
+          className="rounded border border-brand-ink-200 px-2 py-1 text-xs"
         >
           <option value="">class</option>
           {classes.map((c) => (
@@ -300,7 +301,7 @@ function EntryRow({
           <button
             onClick={save}
             disabled={pending}
-            className="rounded bg-slate-900 px-2 py-1 text-xs text-white"
+            className="rounded bg-brand-yellow-400 hover:bg-brand-yellow-500 px-2 py-1 text-xs text-brand-ink-900"
           >
             {pending ? '…' : 'Save'}
           </button>

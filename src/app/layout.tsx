@@ -1,16 +1,19 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist } from 'next/font/google';
+import { ToastProvider } from '@/components/Toast';
+import { InstallPrompt } from '@/components/InstallPrompt';
 import './globals.css';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 
-const companyName = process.env.NEXT_PUBLIC_COMPANY_NAME ?? 'PayrollAuto';
+const companyName = process.env.NEXT_PUBLIC_COMPANY_NAME ?? 'AJK Site Development';
+const appShortName = 'AJK Time';
 
 export const metadata: Metadata = {
-  title: companyName + ' Time',
-  description: 'Construction timekeeping',
+  title: appShortName,
+  description: `${companyName} — timekeeping for the field.`,
   manifest: '/manifest.webmanifest',
-  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: companyName },
+  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: appShortName },
   icons: {
     icon: [{ url: '/icons/icon-192.png', sizes: '192x192' }],
     apple: [{ url: '/icons/icon-192.png' }],
@@ -18,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0f172a',
+  themeColor: '#111111',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -28,8 +31,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
-        {children}
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <ToastProvider>
+          {children}
+          <InstallPrompt />
+        </ToastProvider>
       </body>
     </html>
   );

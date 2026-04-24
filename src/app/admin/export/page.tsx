@@ -37,7 +37,7 @@ export default async function ExportPage({
     <div className="mx-auto max-w-3xl p-6">
       <h1 className="mb-4 text-xl font-semibold">Export payroll</h1>
       <ExportForm from={from} to={to} />
-      <section className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
+      <section className="mt-6 rounded-lg border border-brand-ink-200 bg-white p-4">
         <h2 className="mb-2 font-semibold">Preflight</h2>
         <ul className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
           <Stat label="Rows in range" value={rows?.length ?? 0} />
@@ -47,7 +47,7 @@ export default async function ExportPage({
         </ul>
         {missing.length > 0 && (
           <details className="mt-4">
-            <summary className="cursor-pointer text-sm text-slate-600">
+            <summary className="cursor-pointer text-sm text-brand-ink-600">
               Show {missing.length} rows missing required fields
             </summary>
             <ul className="mt-2 flex flex-col gap-1 text-xs">
@@ -58,7 +58,7 @@ export default async function ExportPage({
                   | null;
                 const e = Array.isArray(eRaw) ? eRaw[0] ?? null : eRaw;
                 return (
-                  <li key={r.id} className="text-slate-600">
+                  <li key={r.id} className="text-brand-ink-600">
                     {r.date} · {e?.emp_code} ·{' '}
                     {[!r.class && 'class', !r.department && 'dept', !r.wcomp1 && 'wc1',
                       r.type === 1 && (!r.job || !r.phase || !r.cat) && 'job.phase.cat']
@@ -78,8 +78,8 @@ export default async function ExportPage({
 function Stat({ label, value, tone }: { label: string; value: number; tone?: 'warn' | 'ok' }) {
   const color = tone === 'warn' ? 'text-amber-600' : tone === 'ok' ? 'text-emerald-600' : '';
   return (
-    <li className="rounded border border-slate-200 p-2">
-      <p className="text-xs text-slate-500">{label}</p>
+    <li className="rounded border border-brand-ink-200 p-2">
+      <p className="text-xs text-brand-ink-500">{label}</p>
       <p className={`text-xl font-semibold ${color}`}>{value}</p>
     </li>
   );

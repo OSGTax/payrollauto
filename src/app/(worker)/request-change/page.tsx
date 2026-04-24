@@ -34,17 +34,17 @@ export default async function RequestChangePage() {
       <ChangeForm entries={entries ?? []} />
       {pending && pending.length > 0 && (
         <section className="mt-6">
-          <h2 className="mb-2 text-sm font-semibold text-slate-600">Recent requests</h2>
+          <h2 className="mb-2 text-sm font-semibold text-brand-ink-600">Recent requests</h2>
           <ul className="flex flex-col gap-2">
             {pending.map((p) => (
-              <li key={p.id} className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+              <li key={p.id} className="rounded-lg border border-brand-ink-200 bg-white p-3 text-sm">
                 <div className="flex justify-between">
                   <span className="font-medium uppercase">{p.status}</span>
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-brand-ink-500">
                     {new Date(p.requested_at).toLocaleDateString()}
                   </span>
                 </div>
-                <p className="mt-1 text-slate-600">{p.message}</p>
+                <p className="mt-1 text-brand-ink-600">{p.message}</p>
               </li>
             ))}
           </ul>

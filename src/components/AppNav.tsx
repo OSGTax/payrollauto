@@ -23,7 +23,7 @@ export function AppNav({ role, pendingCount = 0 }: { role: Role; pendingCount?: 
   const items = canApprove ? [...baseItems, approveItem] : baseItems;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-10 border-t border-slate-200 bg-white">
+    <nav className="fixed bottom-0 left-0 right-0 z-10 border-t border-brand-ink-800 bg-brand-ink-900 text-brand-ink-50">
       <ul className="mx-auto flex max-w-xl items-stretch justify-between">
         {items.map((it) => {
           const active = pathname === it.href || pathname.startsWith(it.href + '/');
@@ -33,14 +33,20 @@ export function AppNav({ role, pendingCount = 0 }: { role: Role; pendingCount?: 
             <li key={it.href} className="flex-1">
               <Link
                 href={it.href}
-                className={`relative flex flex-col items-center gap-1 py-2 text-xs ${
-                  active ? 'text-slate-900' : 'text-slate-400'
+                className={`relative flex flex-col items-center gap-1 py-2 text-xs transition-colors ${
+                  active ? 'text-brand-yellow-400' : 'text-brand-ink-300 hover:text-brand-ink-100'
                 }`}
               >
+                {active && (
+                  <span
+                    aria-hidden
+                    className="absolute inset-x-4 top-0 h-[3px] rounded-b bg-brand-yellow-400"
+                  />
+                )}
                 <div className="relative">
                   <Icon size={20} />
                   {showBadge && (
-                    <span className="absolute -right-3 -top-2 min-w-[18px] rounded-full bg-red-600 px-1 text-center text-[10px] font-semibold leading-[18px] text-white">
+                    <span className="absolute -right-3 -top-2 min-w-[18px] rounded-full bg-brand-yellow-400 px-1 text-center text-[10px] font-semibold leading-[18px] text-brand-ink-900">
                       {pendingCount > 99 ? '99+' : pendingCount}
                     </span>
                   )}

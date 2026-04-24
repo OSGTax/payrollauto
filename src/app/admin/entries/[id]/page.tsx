@@ -21,7 +21,7 @@ export default async function EntryEditPage({
 
   return (
     <div className="mx-auto max-w-3xl p-6">
-      <Link href="/admin/entries" className="text-sm text-slate-500 hover:underline">
+      <Link href="/admin/entries" className="text-sm text-brand-ink-500 hover:underline">
         ← Entries
       </Link>
       <h1 className="mb-4 mt-2 text-xl font-semibold">Edit entry</h1>

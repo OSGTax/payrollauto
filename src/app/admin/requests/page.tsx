@@ -33,7 +33,7 @@ export default async function RequestsPage() {
             }}
           />
         ))}
-        {(rows ?? []).length === 0 && <p className="text-sm text-slate-500">No requests yet.</p>}
+        {(rows ?? []).length === 0 && <p className="text-sm text-brand-ink-500">No requests yet.</p>}
       </div>
     </div>
   );

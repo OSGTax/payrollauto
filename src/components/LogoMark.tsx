@@ -1,8 +1,15 @@
 /**
- * Reads /public/logo.svg — drop the real company logo there.
- * A placeholder is shipped in the repo so the app looks complete out of the box.
+ * Compact AJK brand mark for headers; variant="full" renders the full logo.
  */
-export function LogoMark({ className = 'h-8 w-8' }: { className?: string }) {
+export function LogoMark({
+  className = 'h-8 w-8',
+  variant = 'mark',
+}: {
+  className?: string;
+  variant?: 'mark' | 'full';
+}) {
+  const src = variant === 'full' ? '/ajk-logo.png' : '/logo.svg';
+  const alt = variant === 'full' ? 'AJK Site Development Inc.' : 'AJK';
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src="/logo.svg" alt="Logo" className={className} />;
+  return <img src={src} alt={alt} className={className} />;
 }

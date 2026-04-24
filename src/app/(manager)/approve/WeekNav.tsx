@@ -14,10 +14,10 @@ export function WeekNav({ anchorIso }: { anchorIso: string }) {
   const isCurrent = thisWeek === currentWeek;
 
   return (
-    <div className="mb-4 flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2">
+    <div className="mb-4 flex items-center justify-between gap-2 rounded-lg border border-brand-ink-200 bg-white p-2">
       <Link
         href={`/approve?week=${prev}`}
-        className="rounded px-3 py-1.5 text-sm hover:bg-slate-100"
+        className="rounded px-3 py-1.5 text-sm hover:bg-brand-ink-100"
       >
         ← Previous
       </Link>
@@ -36,7 +36,7 @@ export function WeekNav({ anchorIso }: { anchorIso: string }) {
       </div>
       <Link
         href={`/approve?week=${next}`}
-        className="rounded px-3 py-1.5 text-sm hover:bg-slate-100"
+        className="rounded px-3 py-1.5 text-sm hover:bg-brand-ink-100"
       >
         Next →
       </Link>
