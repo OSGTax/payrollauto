@@ -252,8 +252,10 @@ export async function switchWorkCode(input: {
 
   // Preferred path: a Postgres function (migration 0003) closes the old
   // entry and inserts the new one inside a single transaction, so a worker
-  // can never end up silently clocked out due to a partial write.
-  const { error: rpcErr } = await supabase.rpc('switch_work_code', {
+  // can never end up silently clocked out due to a partial write. The
+  // function returns the new entry's uuid so an offline-queued switch
+  // followed by an offline-queued clock-out can resolve the new entry id.
+  const { data: rpcNewId, error: rpcErr } = await supabase.rpc('switch_work_code', {
     p_entry_id: input.entryId,
     p_end_time: time,
     p_hours: hours,
@@ -265,7 +267,7 @@ export async function switchWorkCode(input: {
   if (!rpcErr) {
     revalidatePath('/clock');
     revalidatePath('/week');
-    return { ok: true };
+    return { ok: true, newEntryId: rpcNewId as string | null };
   }
   // PGRST202 = function not in PostgREST schema cache (i.e. migration not
   // applied yet). Fall back to the imperative two-step + compensating
@@ -300,7 +302,11 @@ export async function switchWorkCode(input: {
     .eq('id', input.entryId);
   if (closeErr) return { error: closeErr.message };
 
-  const { error: openErr } = await supabase.from('time_entries').insert(enriched);
+  const { data: opened, error: openErr } = await supabase
+    .from('time_entries')
+    .insert(enriched)
+    .select('id')
+    .single();
   if (openErr) {
     // New entry didn't land — reopen the original so the worker isn't silently clocked out.
     await supabase.from('time_entries').update(rollbackPatch).eq('id', input.entryId);
@@ -308,5 +314,5 @@ export async function switchWorkCode(input: {
   }
   revalidatePath('/clock');
   revalidatePath('/week');
-  return { ok: true };
+  return { ok: true, newEntryId: opened.id as string };
 }

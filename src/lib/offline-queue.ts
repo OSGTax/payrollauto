@@ -239,7 +239,11 @@ export async function drain(): Promise<{ synced: number; remaining: number }> {
       }
       try {
         const out = await dispatch(item);
-        const result = out.result as { error?: string; entryId?: string };
+        const result = out.result as {
+          error?: string;
+          entryId?: string;
+          newEntryId?: string | null;
+        };
         if (result?.error) {
           item.attempts += 1;
           item.lastError = result.error;
@@ -247,8 +251,14 @@ export async function drain(): Promise<{ synced: number; remaining: number }> {
           if (item.attempts >= 3) await remove(item.id);
           break;
         }
+        // Map synthetic ids minted client-side to the real ids the server
+        // just returned, so any later queued action that referenced the
+        // synthetic one (e.g. a clockOut after an offline switch) can
+        // resolve the right row.
         if (item.kind === 'clockIn' && result?.entryId) {
           idMap.set(syntheticEntryId(item.queuedAt), result.entryId);
+        } else if (item.kind === 'switchWorkCode' && result?.newEntryId) {
+          idMap.set(syntheticEntryId(item.queuedAt), result.newEntryId);
         }
         await remove(item.id);
         synced += 1;
