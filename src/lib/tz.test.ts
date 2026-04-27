@@ -67,6 +67,16 @@ describe('parseEasternWallClock', () => {
     expect(new Date(ms).toISOString()).toBe('2025-11-02T04:30:00.000Z');
   });
 
+  it('resolves the ambiguous fall-back hour to the EDT instance', () => {
+    // 01:30 on 2025-11-02 happens twice (once in EDT, once in EST after
+    // the fall-back). Our two-pass refinement picks the EDT one — first
+    // guess lands at 05:30 UTC (EDT), and the offset there is still EDT,
+    // so it doesn't re-refine to EST. Document this so a future change to
+    // the refinement logic doesn't silently swap the chosen instance.
+    const ms = parseEasternWallClock('2025-11-02', '01:30:00');
+    expect(new Date(ms).toISOString()).toBe('2025-11-02T05:30:00.000Z');
+  });
+
   it('accepts times without seconds', () => {
     const full = parseEasternWallClock('2025-06-15', '09:00:00');
     const short = parseEasternWallClock('2025-06-15', '09:00');

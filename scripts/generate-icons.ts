@@ -67,6 +67,14 @@ async function getCroppedAjkMark(): Promise<Buffer> {
     }
   }
 
+  if (maxY <= minY) {
+    throw new Error(
+      `No brand-yellow pixels found in ${source}. The detection thresholds in ` +
+      `isBrandYellow are tuned to #FFC20E; if the source logo's yellow shifted, ` +
+      `widen the r/g/b ranges and re-run.`,
+    );
+  }
+
   const letterBand = maxY - minY;
 
   // Per-column counts: yellow alone tracks the AJK letters; mark = yellow

@@ -37,6 +37,11 @@ describe('formatTime12h', () => {
     expect(formatTime12h('-1:00')).toBe('--');
     expect(formatTime12h('ab:cd')).toBe('--');
   });
+
+  it('returns fallback for input without minutes', () => {
+    expect(formatTime12h('12')).toBe('--');
+    expect(formatTime12h('07')).toBe('--');
+  });
 });
 
 describe('formatTimeRange', () => {

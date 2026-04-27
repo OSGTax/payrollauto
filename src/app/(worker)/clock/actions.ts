@@ -171,33 +171,6 @@ export async function switchWorkCode(input: {
   const { date, time } = easternDateTime(now);
   const hours = computeHours(current.start_time!, time);
 
-  // Snapshot the pre-close state so we can roll back if the new entry fails to insert.
-  // Supabase-js can't wrap two statements in a single DB transaction from the client,
-  // so this compensating rollback is the closest atomic-ish guarantee without an RPC.
-  const rollbackPatch = {
-    end_time: current.end_time,
-    hours: current.hours,
-    clock_out_lat: current.clock_out_lat,
-    clock_out_lng: current.clock_out_lng,
-    status: current.status,
-    edited_by: current.edited_by,
-    edited_at: current.edited_at,
-  };
-
-  const { error: closeErr } = await supabase
-    .from('time_entries')
-    .update({
-      end_time: time,
-      hours,
-      clock_out_lat: input.lat,
-      clock_out_lng: input.lng,
-      status: 'submitted',
-      edited_by: emp.id,
-      edited_at: now.toISOString(),
-    })
-    .eq('id', input.entryId);
-  if (closeErr) return { error: closeErr.message };
-
   const { data: job } = await supabase
     .from('jobs')
     .select('*')
@@ -230,6 +203,56 @@ export async function switchWorkCode(input: {
     job,
     wc,
   );
+
+  // Preferred path: a Postgres function (migration 0003) closes the old
+  // entry and inserts the new one inside a single transaction, so a worker
+  // can never end up silently clocked out due to a partial write.
+  const { error: rpcErr } = await supabase.rpc('switch_work_code', {
+    p_entry_id: input.entryId,
+    p_end_time: time,
+    p_hours: hours,
+    p_clock_out_lat: input.lat,
+    p_clock_out_lng: input.lng,
+    p_edited_by: emp.id,
+    p_new_entry: enriched,
+  });
+  if (!rpcErr) {
+    revalidatePath('/clock');
+    revalidatePath('/week');
+    return { ok: true };
+  }
+  // PGRST202 = function not in PostgREST schema cache (i.e. migration not
+  // applied yet). Fall back to the imperative two-step + compensating
+  // rollback. Any other error is real and gets surfaced to the worker.
+  const isMissingFn =
+    rpcErr.code === 'PGRST202' ||
+    /function .* does not exist|could not find the function/i.test(rpcErr.message ?? '');
+  if (!isMissingFn) return { error: rpcErr.message };
+
+  // --- Fallback path: imperative close + insert with compensating rollback. ---
+  const rollbackPatch = {
+    end_time: current.end_time,
+    hours: current.hours,
+    clock_out_lat: current.clock_out_lat,
+    clock_out_lng: current.clock_out_lng,
+    status: current.status,
+    edited_by: current.edited_by,
+    edited_at: current.edited_at,
+  };
+
+  const { error: closeErr } = await supabase
+    .from('time_entries')
+    .update({
+      end_time: time,
+      hours,
+      clock_out_lat: input.lat,
+      clock_out_lng: input.lng,
+      status: 'submitted',
+      edited_by: emp.id,
+      edited_at: now.toISOString(),
+    })
+    .eq('id', input.entryId);
+  if (closeErr) return { error: closeErr.message };
 
   const { error: openErr } = await supabase.from('time_entries').insert(enriched);
   if (openErr) {

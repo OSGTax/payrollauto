@@ -2,8 +2,11 @@ import Image from 'next/image';
 
 /**
  * Compact AJK brand mark for headers; variant="full" renders the full logo.
- * Both variants go through next/image so the oversized source PNG is served
- * as a properly-sized WebP/AVIF at request time.
+ *
+ * The full PNG goes through next/image so the oversized source is served as
+ * a right-sized WebP/AVIF. The compact mark is an SVG and ships as-is via
+ * a plain <img> — Next's image optimizer rejects SVGs by default
+ * (`dangerouslyAllowSVG`) and they don't benefit from optimization anyway.
  */
 export function LogoMark({
   className = 'h-8 w-8',
@@ -24,17 +27,10 @@ export function LogoMark({
         priority={priority}
         sizes="(max-width: 640px) 280px, 320px"
         className={className}
+        style={{ width: 'auto', height: 'auto' }}
       />
     );
   }
-  return (
-    <Image
-      src="/logo.svg"
-      alt="AJK"
-      width={64}
-      height={64}
-      priority={priority}
-      className={className}
-    />
-  );
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/logo.svg" alt="AJK" className={className} />;
 }

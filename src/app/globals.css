@@ -2,11 +2,10 @@
 
 /* Dark mode is intentionally off for now: the surface/card sweep isn't done,
    so a dark root with light cards would look worse than a consistent light theme.
-   Keep these tokens available for a future dark-mode pass. */
+   `--surface-muted` and `--border-muted` are consumed by .skeleton below. */
 :root {
   --background: #fafaf9;
   --foreground: #111111;
-  --surface: #ffffff;
   --surface-muted: #f5f5f4;
   --border-muted: #e7e5e4;
 }
@@ -14,9 +13,6 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-surface: var(--surface);
-  --color-surface-muted: var(--surface-muted);
-  --color-border-muted: var(--border-muted);
   --font-sans: var(--font-geist-sans);
 
   /* AJK brand palette — construction yellow + ink. */
