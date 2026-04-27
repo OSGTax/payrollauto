@@ -51,10 +51,43 @@ export async function clockIn(input: {
     wc,
   );
 
-  const { error } = await supabase.from('time_entries').insert(enriched);
+  const { data: inserted, error } = await supabase
+    .from('time_entries')
+    .insert(enriched)
+    .select('id')
+    .single();
   if (error) return { error: error.message };
   revalidatePath('/clock');
   revalidatePath('/week');
+  return { ok: true, entryId: inserted.id as string };
+}
+
+/**
+ * Best-effort GPS patch for entries whose lat/lng wasn't available at the
+ * moment of clock-in/out. Called fire-and-forget once `getCurrentPosition`
+ * resolves so the worker isn't kept waiting on a slow fix.
+ */
+export async function patchEntryLocation(input: {
+  entryId: string;
+  kind: 'clock_in' | 'clock_out';
+  lat: number;
+  lng: number;
+}) {
+  const emp = await getCurrentEmployee();
+  if (!emp) return { error: 'Not signed in.' };
+  const supabase = await createClient();
+  const latCol = input.kind === 'clock_in' ? 'clock_in_lat' : 'clock_out_lat';
+  const patch =
+    input.kind === 'clock_in'
+      ? { clock_in_lat: input.lat, clock_in_lng: input.lng }
+      : { clock_out_lat: input.lat, clock_out_lng: input.lng };
+  const { error } = await supabase
+    .from('time_entries')
+    .update(patch)
+    .eq('id', input.entryId)
+    .eq('employee_id', emp.id)
+    .is(latCol, null);
+  if (error) return { error: error.message };
   return { ok: true };
 }
 

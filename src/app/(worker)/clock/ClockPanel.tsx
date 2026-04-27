@@ -7,7 +7,7 @@ import { JobPicker } from '@/components/JobPicker';
 import { useToast } from '@/components/Toast';
 import { formatTime12h } from '@/lib/time';
 import { parseEasternWallClock } from '@/lib/tz';
-import { clockIn, clockOut, takeBreak, switchWorkCode } from './actions';
+import { clockIn, clockOut, takeBreak, switchWorkCode, patchEntryLocation } from './actions';
 import type { Job, TimeEntry } from '@/lib/types';
 import type { OpenEntryDetail } from './page';
 import { format } from 'date-fns';
@@ -94,6 +94,16 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
     );
   }, [isClockedIn]);
 
+  // Snapshot the cached fix at the moment of a button tap. If the warm-up
+  // already produced coords, we use them and skip waiting on GPS entirely;
+  // otherwise the caller fires a fresh request in parallel with the action.
+  function cachedCoords(): { lat: number; lng: number } | null {
+    if (geo.status === 'ok' && geo.lat != null && geo.lng != null) {
+      return { lat: geo.lat, lng: geo.lng };
+    }
+    return null;
+  }
+
   // Live elapsed counter while clocked in.
   const [elapsed, setElapsed] = useState('00:00:00');
   useEffect(() => {
@@ -104,21 +114,22 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
     return () => clearInterval(id);
   }, [isClockedIn, openEntry]);
 
-  async function handleClockIn() {
+  function handleClockIn() {
     if (!pickedJob || !pickedPhase || !pickedCat) {
       toast.error('Pick a job, phase, and category first.');
       return;
     }
     buzz(40);
     setPulseKey((k) => k + 1);
-    const coords = await geolocate();
+    const cached = cachedCoords();
+    const fresh = cached ? null : geolocate();
     startTransition(async () => {
       const res = await clockIn({
         job: pickedJob,
         phase: pickedPhase,
         cat: pickedCat,
-        lat: coords?.lat ?? null,
-        lng: coords?.lng ?? null,
+        lat: cached?.lat ?? null,
+        lng: cached?.lng ?? null,
       });
       if (res?.error) {
         toast.error('Could not clock in', res.error);
@@ -131,18 +142,27 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
         `${pickedJob} · ${pickedPhase} · ${pickedCat}`,
       );
       router.refresh();
+      if (fresh && res.entryId) {
+        const c = await fresh;
+        if (c) {
+          void patchEntryLocation({ entryId: res.entryId, kind: 'clock_in', lat: c.lat, lng: c.lng });
+        }
+      }
     });
   }
 
-  async function handleClockOut() {
+  function handleClockOut() {
+    if (!openEntry) return;
+    const entryId = openEntry.id;
     buzz(40);
     setPulseKey((k) => k + 1);
-    const coords = await geolocate();
+    const cached = cachedCoords();
+    const fresh = cached ? null : geolocate();
     startTransition(async () => {
       const res = await clockOut({
-        entryId: openEntry!.id,
-        lat: coords?.lat ?? null,
-        lng: coords?.lng ?? null,
+        entryId,
+        lat: cached?.lat ?? null,
+        lng: cached?.lng ?? null,
       });
       if (res?.error) {
         toast.error('Could not clock out', res.error);
@@ -152,18 +172,26 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
       buzz([60, 40, 30]);
       toast.success(`Clocked out · ${format(new Date(), 'h:mm a')}`, `Total: ${elapsed}`);
       router.refresh();
+      if (fresh) {
+        const c = await fresh;
+        if (c) {
+          void patchEntryLocation({ entryId, kind: 'clock_out', lat: c.lat, lng: c.lng });
+        }
+      }
     });
   }
 
-  async function handleTakeBreak() {
+  function handleTakeBreak() {
     if (!openEntry) return;
+    const entryId = openEntry.id;
     buzz(30);
-    const coords = await geolocate();
+    const cached = cachedCoords();
+    const fresh = cached ? null : geolocate();
     startTransition(async () => {
       const res = await takeBreak({
-        entryId: openEntry.id,
-        lat: coords?.lat ?? null,
-        lng: coords?.lng ?? null,
+        entryId,
+        lat: cached?.lat ?? null,
+        lng: cached?.lng ?? null,
       });
       if (res?.error) {
         toast.error('Could not start break', res.error);
@@ -171,6 +199,12 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
       }
       toast.success('Enjoy your break', `Total so far: ${elapsed}`);
       router.refresh();
+      if (fresh) {
+        const c = await fresh;
+        if (c) {
+          void patchEntryLocation({ entryId, kind: 'clock_out', lat: c.lat, lng: c.lng });
+        }
+      }
     });
   }
 
@@ -182,7 +216,7 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
     setSwitcherOpen(true);
   }
 
-  async function handleSwitchWorkCode() {
+  function handleSwitchWorkCode() {
     if (!openEntry) return;
     if (!switchJob || !switchPhase || !switchCat) {
       toast.error('Pick a job, phase, and category first.');
@@ -196,16 +230,22 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
       setSwitcherOpen(false);
       return;
     }
+    const oldEntryId = openEntry.id;
     buzz(30);
-    const coords = await geolocate();
+    const cached = cachedCoords();
+    // Switch closes the old entry and opens a new one. We can patch the old
+    // entry's clock_out coords if GPS arrives late; the new entry's clock_in
+    // coords aren't patchable here without an RPC change, so cached coords are
+    // its only chance.
+    const fresh = cached ? null : geolocate();
     startTransition(async () => {
       const res = await switchWorkCode({
-        entryId: openEntry.id,
+        entryId: oldEntryId,
         job: switchJob,
         phase: switchPhase,
         cat: switchCat,
-        lat: coords?.lat ?? null,
-        lng: coords?.lng ?? null,
+        lat: cached?.lat ?? null,
+        lng: cached?.lng ?? null,
       });
       if (res?.error) {
         toast.error('Could not switch code', res.error);
@@ -214,6 +254,12 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
       toast.success('Switched work code', `Now on ${switchJob} · ${switchPhase} · ${switchCat}`);
       setSwitcherOpen(false);
       router.refresh();
+      if (fresh) {
+        const c = await fresh;
+        if (c) {
+          void patchEntryLocation({ entryId: oldEntryId, kind: 'clock_out', lat: c.lat, lng: c.lng });
+        }
+      }
     });
   }
 
