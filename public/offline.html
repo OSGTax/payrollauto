@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Offline · AJK Time</title>
+    <link rel="icon" href="/icons/icon-192.png" />
+    <style>
+      :root { color-scheme: light; }
+      html, body { margin: 0; height: 100%; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        background: #fafaf9;
+        color: #111111;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        text-align: center;
+      }
+      .card {
+        max-width: 420px;
+        width: 100%;
+        background: #ffffff;
+        border: 1px solid #e7e5e4;
+        border-radius: 16px;
+        padding: 32px 24px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      }
+      h1 { font-size: 20px; margin: 0 0 8px; }
+      p { font-size: 14px; color: #57534e; margin: 0 0 16px; line-height: 1.5; }
+      button {
+        font-size: 14px;
+        font-weight: 600;
+        background: #facc15;
+        color: #111111;
+        border: 0;
+        border-radius: 12px;
+        padding: 10px 16px;
+        cursor: pointer;
+      }
+      button:hover { background: #eab308; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>You're offline</h1>
+      <p>
+        AJK Time can't reach the server right now. Anything you've already
+        tapped (clock in, break, switch) is saved on this device and will
+        sync the moment you're back online.
+      </p>
+      <button onclick="location.reload()">Try again</button>
+    </div>
+  </body>
+</html>

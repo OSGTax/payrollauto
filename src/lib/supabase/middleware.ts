@@ -29,7 +29,14 @@ export async function updateSession(request: NextRequest) {
   const isAuthRoute = url.pathname.startsWith('/login');
   const isSetup = url.pathname.startsWith('/setup');
   const isApiAuth = url.pathname.startsWith('/api/auth');
-  const isPublic = isAuthRoute || isSetup || isApiAuth || url.pathname.startsWith('/_next') || url.pathname === '/manifest.webmanifest';
+  const isPublic =
+    isAuthRoute ||
+    isSetup ||
+    isApiAuth ||
+    url.pathname.startsWith('/_next') ||
+    url.pathname === '/manifest.webmanifest' ||
+    url.pathname === '/sw.js' ||
+    url.pathname === '/offline.html';
 
   if (!user && !isPublic) {
     url.pathname = '/login';

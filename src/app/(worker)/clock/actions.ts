@@ -6,12 +6,22 @@ import { getCurrentEmployee } from '@/lib/session';
 import { enrichEntry, computeHours } from '@/lib/enrich';
 import { easternDateTime } from '@/lib/tz';
 
+/** Resolve the moment to record. Falls back to server now if the worker
+ *  didn't supply a tap time. Lets queued offline actions preserve the
+ *  original tap time when they sync minutes or hours later. */
+function tapDate(client_at_iso: string | null | undefined): Date {
+  if (!client_at_iso) return new Date();
+  const d = new Date(client_at_iso);
+  return Number.isNaN(d.getTime()) ? new Date() : d;
+}
+
 export async function clockIn(input: {
   job: string;
   phase: string;
   cat: string;
   lat: number | null;
   lng: number | null;
+  client_at_iso?: string | null;
 }) {
   const emp = await getCurrentEmployee();
   if (!emp) return { error: 'Not signed in.' };
@@ -31,7 +41,7 @@ export async function clockIn(input: {
         .maybeSingle()
     : { data: null };
 
-  const { date, time } = easternDateTime();
+  const { date, time } = easternDateTime(tapDate(input.client_at_iso));
   const enriched = enrichEntry(
     {
       date,
@@ -95,6 +105,7 @@ export async function clockOut(input: {
   entryId: string;
   lat: number | null;
   lng: number | null;
+  client_at_iso?: string | null;
 }) {
   const emp = await getCurrentEmployee();
   if (!emp) return { error: 'Not signed in.' };
@@ -107,8 +118,8 @@ export async function clockOut(input: {
     .maybeSingle();
   if (!entry) return { error: 'Entry not found.' };
 
-  const now = new Date();
-  const { time: endTime } = easternDateTime(now);
+  const tap = tapDate(input.client_at_iso);
+  const { time: endTime } = easternDateTime(tap);
   const hours = computeHours(entry.start_time!, endTime);
 
   const { error } = await supabase
@@ -120,7 +131,7 @@ export async function clockOut(input: {
       clock_out_lng: input.lng,
       status: 'submitted',
       edited_by: emp.id,
-      edited_at: now.toISOString(),
+      edited_at: new Date().toISOString(),
     })
     .eq('id', input.entryId);
   if (error) return { error: error.message };
@@ -137,6 +148,7 @@ export async function takeBreak(input: {
   entryId: string;
   lat: number | null;
   lng: number | null;
+  client_at_iso?: string | null;
 }) {
   const emp = await getCurrentEmployee();
   if (!emp) return { error: 'Not signed in.' };
@@ -149,8 +161,8 @@ export async function takeBreak(input: {
     .maybeSingle();
   if (!entry) return { error: 'Entry not found.' };
 
-  const now = new Date();
-  const { time: endTime } = easternDateTime(now);
+  const tap = tapDate(input.client_at_iso);
+  const { time: endTime } = easternDateTime(tap);
   const hours = computeHours(entry.start_time!, endTime);
 
   const { error } = await supabase
@@ -162,7 +174,7 @@ export async function takeBreak(input: {
       clock_out_lng: input.lng,
       status: 'submitted',
       edited_by: emp.id,
-      edited_at: now.toISOString(),
+      edited_at: new Date().toISOString(),
     })
     .eq('id', input.entryId);
   if (error) return { error: error.message };
@@ -183,6 +195,7 @@ export async function switchWorkCode(input: {
   cat: string;
   lat: number | null;
   lng: number | null;
+  client_at_iso?: string | null;
 }) {
   const emp = await getCurrentEmployee();
   if (!emp) return { error: 'Not signed in.' };
@@ -200,8 +213,8 @@ export async function switchWorkCode(input: {
     return { ok: true, unchanged: true };
   }
 
-  const now = new Date();
-  const { date, time } = easternDateTime(now);
+  const tap = tapDate(input.client_at_iso);
+  const { date, time } = easternDateTime(tap);
   const hours = computeHours(current.start_time!, time);
 
   const { data: job } = await supabase
@@ -282,7 +295,7 @@ export async function switchWorkCode(input: {
       clock_out_lng: input.lng,
       status: 'submitted',
       edited_by: emp.id,
-      edited_at: now.toISOString(),
+      edited_at: new Date().toISOString(),
     })
     .eq('id', input.entryId);
   if (closeErr) return { error: closeErr.message };

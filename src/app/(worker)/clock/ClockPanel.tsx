@@ -7,7 +7,8 @@ import { JobPicker } from '@/components/JobPicker';
 import { useToast } from '@/components/Toast';
 import { formatTime12h } from '@/lib/time';
 import { parseEasternWallClock } from '@/lib/tz';
-import { clockIn, clockOut, takeBreak, switchWorkCode, patchEntryLocation } from './actions';
+import { patchEntryLocation } from './actions';
+import { runOrQueue } from '@/lib/offline-queue';
 import type { Job, TimeEntry } from '@/lib/types';
 import type { OpenEntryDetail } from './page';
 import { format } from 'date-fns';
@@ -123,14 +124,25 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
     setPulseKey((k) => k + 1);
     const cached = cachedCoords();
     const fresh = cached ? null : geolocate();
+    const tappedAt = new Date().toISOString();
     startTransition(async () => {
-      const res = await clockIn({
-        job: pickedJob,
-        phase: pickedPhase,
-        cat: pickedCat,
-        lat: cached?.lat ?? null,
-        lng: cached?.lng ?? null,
+      const out = await runOrQueue({
+        kind: 'clockIn',
+        payload: {
+          job: pickedJob,
+          phase: pickedPhase,
+          cat: pickedCat,
+          lat: cached?.lat ?? null,
+          lng: cached?.lng ?? null,
+          client_at_iso: tappedAt,
+        },
       });
+      if ('queued' in out) {
+        buzz([30, 30, 30]);
+        toast.info('Saved offline', 'Will sync when you have signal.');
+        return;
+      }
+      const res = out.result as { error?: string; entryId?: string };
       if (res?.error) {
         toast.error('Could not clock in', res.error);
         buzz([20, 40, 20]);
@@ -158,12 +170,23 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
     setPulseKey((k) => k + 1);
     const cached = cachedCoords();
     const fresh = cached ? null : geolocate();
+    const tappedAt = new Date().toISOString();
     startTransition(async () => {
-      const res = await clockOut({
-        entryId,
-        lat: cached?.lat ?? null,
-        lng: cached?.lng ?? null,
+      const out = await runOrQueue({
+        kind: 'clockOut',
+        payload: {
+          entryId,
+          lat: cached?.lat ?? null,
+          lng: cached?.lng ?? null,
+          client_at_iso: tappedAt,
+        },
       });
+      if ('queued' in out) {
+        buzz([30, 30, 30]);
+        toast.info('Saved offline', 'Will sync when you have signal.');
+        return;
+      }
+      const res = out.result as { error?: string };
       if (res?.error) {
         toast.error('Could not clock out', res.error);
         buzz([20, 40, 20]);
@@ -187,12 +210,22 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
     buzz(30);
     const cached = cachedCoords();
     const fresh = cached ? null : geolocate();
+    const tappedAt = new Date().toISOString();
     startTransition(async () => {
-      const res = await takeBreak({
-        entryId,
-        lat: cached?.lat ?? null,
-        lng: cached?.lng ?? null,
+      const out = await runOrQueue({
+        kind: 'takeBreak',
+        payload: {
+          entryId,
+          lat: cached?.lat ?? null,
+          lng: cached?.lng ?? null,
+          client_at_iso: tappedAt,
+        },
       });
+      if ('queued' in out) {
+        toast.info('Saved offline', 'Break will register when you have signal.');
+        return;
+      }
+      const res = out.result as { error?: string };
       if (res?.error) {
         toast.error('Could not start break', res.error);
         return;
@@ -238,15 +271,26 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
     // coords aren't patchable here without an RPC change, so cached coords are
     // its only chance.
     const fresh = cached ? null : geolocate();
+    const tappedAt = new Date().toISOString();
     startTransition(async () => {
-      const res = await switchWorkCode({
-        entryId: oldEntryId,
-        job: switchJob,
-        phase: switchPhase,
-        cat: switchCat,
-        lat: cached?.lat ?? null,
-        lng: cached?.lng ?? null,
+      const out = await runOrQueue({
+        kind: 'switchWorkCode',
+        payload: {
+          entryId: oldEntryId,
+          job: switchJob,
+          phase: switchPhase,
+          cat: switchCat,
+          lat: cached?.lat ?? null,
+          lng: cached?.lng ?? null,
+          client_at_iso: tappedAt,
+        },
       });
+      if ('queued' in out) {
+        toast.info('Saved offline', 'Switch will register when you have signal.');
+        setSwitcherOpen(false);
+        return;
+      }
+      const res = out.result as { error?: string };
       if (res?.error) {
         toast.error('Could not switch code', res.error);
         return;

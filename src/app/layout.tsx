@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { Geist } from 'next/font/google';
 import { ToastProvider } from '@/components/Toast';
 import { InstallPrompt } from '@/components/InstallPrompt';
+import { OfflineStatus } from '@/components/OfflineStatus';
+import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
 import './globals.css';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
@@ -39,6 +41,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ToastProvider>
           {children}
           <InstallPrompt />
+          <OfflineStatus />
+          <ServiceWorkerRegister />
         </ToastProvider>
       </body>
     </html>
