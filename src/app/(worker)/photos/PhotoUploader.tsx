@@ -42,7 +42,11 @@ export function PhotoUploader({ employeeId, empCode }: { employeeId: string; emp
     setUploading(true);
     setProgress(5);
     const supabase = createClient();
-    const path = `${empCode.toLowerCase()}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    // The Supabase Storage RLS policy on the `photos` bucket compares the
+    // first path segment to the worker's emp_code as stored in the DB
+    // (uppercase, per setup/employees actions). Lowercasing here would trip
+    // the policy and the upload would 403 with a row-level-security error.
+    const path = `${empCode}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
 
     // supabase-js v2 doesn't expose upload progress events, so we fake a monotonic
     // progress bar that stops just short of 100% and resolves on completion.
