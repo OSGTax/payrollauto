@@ -87,4 +87,5 @@ export type TimeEntry = {
   created_at: string;
   edited_by: string | null;
   edited_at: string | null;
+  client_op_id: string | null;
 };

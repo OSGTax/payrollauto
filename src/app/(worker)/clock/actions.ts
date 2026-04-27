@@ -22,10 +22,24 @@ export async function clockIn(input: {
   lat: number | null;
   lng: number | null;
   client_at_iso?: string | null;
+  client_op_id?: string | null;
 }) {
   const emp = await getCurrentEmployee();
   if (!emp) return { error: 'Not signed in.' };
   const supabase = await createClient();
+
+  // Dedup: if this op already produced a row (queue replay after a half-
+  // resolved network call), short-circuit and return the existing id.
+  if (input.client_op_id) {
+    const { data: existing } = await supabase
+      .from('time_entries')
+      .select('id')
+      .eq('client_op_id', input.client_op_id)
+      .maybeSingle();
+    if (existing?.id) {
+      return { ok: true, entryId: existing.id as string, replayed: true };
+    }
+  }
 
   const { data: job } = await supabase
     .from('jobs')
@@ -55,6 +69,7 @@ export async function clockIn(input: {
       clock_in_lng: input.lng,
       status: 'draft',
       created_by: emp.id,
+      client_op_id: input.client_op_id ?? null,
     },
     emp,
     job,
@@ -196,10 +211,25 @@ export async function switchWorkCode(input: {
   lat: number | null;
   lng: number | null;
   client_at_iso?: string | null;
+  client_op_id?: string | null;
 }) {
   const emp = await getCurrentEmployee();
   if (!emp) return { error: 'Not signed in.' };
   const supabase = await createClient();
+
+  // Dedup: if this op already produced a new entry, short-circuit. The
+  // RPC has its own guard too, but checking here keeps the fallback path
+  // safe and avoids a needless write.
+  if (input.client_op_id) {
+    const { data: existing } = await supabase
+      .from('time_entries')
+      .select('id')
+      .eq('client_op_id', input.client_op_id)
+      .maybeSingle();
+    if (existing?.id) {
+      return { ok: true, newEntryId: existing.id as string, replayed: true };
+    }
+  }
 
   const { data: current } = await supabase
     .from('time_entries')
@@ -244,6 +274,7 @@ export async function switchWorkCode(input: {
       clock_in_lng: input.lng,
       status: 'draft',
       created_by: emp.id,
+      client_op_id: input.client_op_id ?? null,
     },
     emp,
     job,

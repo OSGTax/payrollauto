@@ -145,6 +145,11 @@ function isNetworkError(e: unknown): boolean {
   return /network|fetch|failed to fetch|load failed|connection|offline/i.test(e.message);
 }
 
+function isAuthError(message: string | undefined): boolean {
+  if (!message) return false;
+  return /not signed in|unauthorized|jwt|auth/i.test(message);
+}
+
 /**
  * Try the server action. On network failure or while offline, persist the
  * action and return a `queued` marker so the UI can show "saved offline".
@@ -248,6 +253,10 @@ export async function drain(): Promise<{ synced: number; remaining: number }> {
           item.attempts += 1;
           item.lastError = result.error;
           await update(item);
+          // Auth failures (expired session, etc.) shouldn't poison the queue.
+          // Pause the drain and leave the item alone — once the worker logs
+          // back in, the next online/visibility tick will retry.
+          if (isAuthError(result.error)) break;
           if (item.attempts >= 3) await remove(item.id);
           break;
         }

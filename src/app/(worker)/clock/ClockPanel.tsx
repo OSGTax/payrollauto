@@ -114,6 +114,7 @@ function synthesizeEntry(
     created_at: tap.toISOString(),
     edited_by: null,
     edited_at: null,
+    client_op_id: null,
   };
 }
 
@@ -224,6 +225,7 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
     const cached = cachedCoords();
     const fresh = cached ? null : geolocate();
     const tappedAt = new Date().toISOString();
+    const opId = crypto.randomUUID();
     startTransition(async () => {
       const out = await runOrQueue({
         kind: 'clockIn',
@@ -234,6 +236,7 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
           lat: cached?.lat ?? null,
           lng: cached?.lng ?? null,
           client_at_iso: tappedAt,
+          client_op_id: opId,
         },
       });
       if ('queued' in out) {
@@ -371,6 +374,7 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
     // its only chance.
     const fresh = cached ? null : geolocate();
     const tappedAt = new Date().toISOString();
+    const opId = crypto.randomUUID();
     startTransition(async () => {
       const out = await runOrQueue({
         kind: 'switchWorkCode',
@@ -382,6 +386,7 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
           lat: cached?.lat ?? null,
           lng: cached?.lng ?? null,
           client_at_iso: tappedAt,
+          client_op_id: opId,
         },
       });
       if ('queued' in out) {
