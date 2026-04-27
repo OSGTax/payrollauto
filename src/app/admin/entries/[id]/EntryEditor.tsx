@@ -9,6 +9,12 @@ type Opt = { code: string; description: string };
 type EntryWithEmp = TimeEntry & {
   employees: { emp_code: string; first_name: string; last_name: string } | null;
 };
+type Photo = {
+  id: string;
+  kind: 'job' | 'receipt';
+  caption: string | null;
+  uploaded_at: string;
+};
 
 export function EntryEditor({
   entry,
@@ -16,12 +22,14 @@ export function EntryEditor({
   classes,
   wcompCodes,
   departments,
+  photos,
 }: {
   entry: EntryWithEmp;
   jobs: { job_code: string; description: string }[];
   classes: Opt[];
   wcompCodes: Opt[];
   departments: Opt[];
+  photos: Photo[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -159,6 +167,48 @@ export function EntryEditor({
         </select>
       </Field>
       {error && <p className="text-sm text-red-600">{error}</p>}
+      <div>
+        <p className="mb-2 text-xs font-medium uppercase text-brand-ink-500">
+          Photos uploaded {entry.date}
+          {photos.length > 0 && ` (${photos.length})`}
+        </p>
+        {photos.length === 0 ? (
+          <p className="text-sm text-brand-ink-400">No photos uploaded on this day.</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {photos.map((p) => (
+              <a
+                key={p.id}
+                href={`/api/photo/${p.id}`}
+                target="_blank"
+                rel="noopener"
+                className="group block overflow-hidden rounded-lg border border-brand-ink-200 hover:border-brand-ink-900"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`/api/photo/${p.id}`}
+                  alt={p.caption ?? p.kind}
+                  className="h-32 w-full object-cover"
+                />
+                <div className="px-2 py-1 text-xs">
+                  <span
+                    className={
+                      p.kind === 'receipt'
+                        ? 'rounded bg-emerald-100 px-1 text-emerald-800'
+                        : 'rounded bg-brand-yellow-100 px-1 text-brand-ink-900'
+                    }
+                  >
+                    {p.kind}
+                  </span>
+                  {p.caption && (
+                    <span className="ml-1 text-brand-ink-600">{p.caption}</span>
+                  )}
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="flex justify-between">
         <button type="button" onClick={del} disabled={pending} className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-700 disabled:opacity-50">
           Delete entry

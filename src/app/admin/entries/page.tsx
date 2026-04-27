@@ -1,8 +1,16 @@
 import { createClient } from '@/lib/supabase/server';
 import { isoDate, weekDays } from '@/lib/week';
-import { subDays } from 'date-fns';
+import { addDays, format, subDays } from 'date-fns';
 import { EntriesFilters } from './EntriesFilters';
 import { EntriesTable } from './EntriesTable';
+
+type PhotoRow = {
+  id: string;
+  employee_id: string;
+  kind: 'job' | 'receipt';
+  caption: string | null;
+  uploaded_at: string;
+};
 
 export default async function EntriesPage({
   searchParams,
@@ -48,6 +56,39 @@ export default async function EntriesPage({
     return { ...r, employees };
   });
 
+  const employeeIds = Array.from(new Set(normalized.map((r) => r.employee_id)));
+  const photosByDay = new Map<string, PhotoRow[]>();
+  if (employeeIds.length) {
+    // Pad ±1 day to forgive timezone drift between UTC `uploaded_at` and the
+    // local `date` on time_entries.
+    const photoFrom = isoDate(subDays(new Date(`${from}T00:00:00`), 1));
+    const photoTo = isoDate(addDays(new Date(`${to}T00:00:00`), 2));
+    const { data: photos } = await supabase
+      .from('entry_photos')
+      .select('id, employee_id, kind, caption, uploaded_at')
+      .in('employee_id', employeeIds)
+      .gte('uploaded_at', `${photoFrom}T00:00:00Z`)
+      .lt('uploaded_at', `${photoTo}T00:00:00Z`)
+      .order('uploaded_at', { ascending: true });
+    for (const p of (photos ?? []) as PhotoRow[]) {
+      const day = format(new Date(p.uploaded_at), 'yyyy-MM-dd');
+      const key = `${p.employee_id}|${day}`;
+      const list = photosByDay.get(key) ?? [];
+      list.push(p);
+      photosByDay.set(key, list);
+    }
+  }
+
+  const rowsWithPhotos = normalized.map((r) => ({
+    ...r,
+    photos:
+      photosByDay.get(`${r.employee_id}|${r.date}`)?.map((p) => ({
+        id: p.id,
+        kind: p.kind,
+        caption: p.caption,
+      })) ?? [],
+  }));
+
   return (
     <div className="mx-auto max-w-7xl p-6">
       <h1 className="mb-4 text-xl font-semibold">Time entries</h1>
@@ -58,7 +99,7 @@ export default async function EntriesPage({
         status={sp.status ?? ''}
         employees={emps ?? []}
       />
-      <EntriesTable rows={normalized} />
+      <EntriesTable rows={rowsWithPhotos} />
     </div>
   );
 }

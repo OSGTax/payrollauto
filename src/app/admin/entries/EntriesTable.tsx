@@ -7,6 +7,12 @@ import { format, parseISO } from 'date-fns';
 import { pushBackEntries } from './actions';
 import { formatTime12h } from '@/lib/time';
 
+type Photo = {
+  id: string;
+  kind: 'job' | 'receipt';
+  caption: string | null;
+};
+
 type Row = {
   id: string;
   date: string;
@@ -24,6 +30,7 @@ type Row = {
   admin_note: string | null;
   pushed_back_at: string | null;
   employees: { emp_code: string; first_name: string; last_name: string } | null;
+  photos: Photo[];
 };
 
 export function EntriesTable({ rows }: { rows: Row[] }) {
@@ -117,6 +124,7 @@ export function EntriesTable({ rows }: { rows: Row[] }) {
               <th className="px-2 py-2">Dept</th>
               <th className="px-2 py-2">WC</th>
               <th className="px-2 py-2">Status</th>
+              <th className="px-2 py-2">Photos</th>
               <th />
             </tr>
           </thead>
@@ -181,6 +189,45 @@ export function EntriesTable({ rows }: { rows: Row[] }) {
                       >
                         ↩
                       </span>
+                    )}
+                  </td>
+                  <td className="px-2 py-1.5">
+                    {r.photos.length === 0 ? (
+                      <span className="text-brand-ink-300">—</span>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-1">
+                        {r.photos.slice(0, 4).map((p) => (
+                          <a
+                            key={p.id}
+                            href={`/api/photo/${p.id}`}
+                            target="_blank"
+                            rel="noopener"
+                            title={
+                              p.caption
+                                ? `${p.kind === 'receipt' ? 'Receipt' : 'Job'}: ${p.caption}`
+                                : p.kind === 'receipt'
+                                ? 'Receipt'
+                                : 'Job photo'
+                            }
+                            className="block h-9 w-9 overflow-hidden rounded border border-brand-ink-200 hover:border-brand-ink-900"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={`/api/photo/${p.id}`}
+                              alt={p.caption ?? p.kind}
+                              className="h-full w-full object-cover"
+                            />
+                          </a>
+                        ))}
+                        {r.photos.length > 4 && (
+                          <Link
+                            href={`/admin/entries/${r.id}`}
+                            className="text-[11px] text-brand-ink-600 hover:underline"
+                          >
+                            +{r.photos.length - 4}
+                          </Link>
+                        )}
+                      </div>
                     )}
                   </td>
                   <td className="px-2 py-1.5 text-right">
