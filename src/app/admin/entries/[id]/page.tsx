@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { addDays, format, subDays } from 'date-fns';
+import { addDays, subDays } from 'date-fns';
 import { createClient } from '@/lib/supabase/server';
+import { isoDate, weekEnd, weekStart } from '@/lib/week';
 import { EntryEditor } from './EntryEditor';
 
 export default async function EntryEditPage({
@@ -20,11 +21,13 @@ export default async function EntryEditPage({
   ]);
   if (!entry.data) notFound();
 
-  // Photos uploaded on the entry's date for this employee. Pad ±1 day
-  // around the local date to forgive UTC/local timezone drift.
+  // Photos uploaded any time during this entry's company week (Mon–Sun)
+  // for this employee. Pad ±1 day for UTC/local timezone drift.
   const entryDate = entry.data.date as string;
-  const photoFrom = format(subDays(new Date(`${entryDate}T00:00:00`), 1), 'yyyy-MM-dd');
-  const photoTo = format(addDays(new Date(`${entryDate}T00:00:00`), 2), 'yyyy-MM-dd');
+  const wkStart = weekStart(entryDate);
+  const wkEnd = weekEnd(entryDate);
+  const photoFrom = isoDate(subDays(wkStart, 1));
+  const photoTo = isoDate(addDays(wkEnd, 2));
   const { data: photos } = await supabase
     .from('entry_photos')
     .select('id, kind, caption, uploaded_at')
@@ -32,9 +35,10 @@ export default async function EntryEditPage({
     .gte('uploaded_at', `${photoFrom}T00:00:00Z`)
     .lt('uploaded_at', `${photoTo}T00:00:00Z`)
     .order('uploaded_at', { ascending: true });
-  const dayPhotos = (photos ?? []).filter(
-    (p) => format(new Date(p.uploaded_at), 'yyyy-MM-dd') === entryDate,
-  );
+  const weekPhotos = (photos ?? []).filter((p) => {
+    const t = new Date(p.uploaded_at).getTime();
+    return t >= wkStart.getTime() && t < addDays(wkEnd, 1).getTime();
+  });
 
   return (
     <div className="mx-auto max-w-3xl p-6">
@@ -48,7 +52,9 @@ export default async function EntryEditPage({
         classes={classes.data ?? []}
         wcompCodes={wcs.data ?? []}
         departments={depts.data ?? []}
-        photos={dayPhotos}
+        photos={weekPhotos}
+        weekStart={isoDate(wkStart)}
+        weekEnd={isoDate(wkEnd)}
       />
     </div>
   );

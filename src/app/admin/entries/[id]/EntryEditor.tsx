@@ -23,6 +23,8 @@ export function EntryEditor({
   wcompCodes,
   departments,
   photos,
+  weekStart,
+  weekEnd,
 }: {
   entry: EntryWithEmp;
   jobs: { job_code: string; description: string }[];
@@ -30,6 +32,8 @@ export function EntryEditor({
   wcompCodes: Opt[];
   departments: Opt[];
   photos: Photo[];
+  weekStart: string;
+  weekEnd: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -169,11 +173,11 @@ export function EntryEditor({
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div>
         <p className="mb-2 text-xs font-medium uppercase text-brand-ink-500">
-          Photos uploaded {entry.date}
-          {photos.length > 0 && ` (${photos.length})`}
+          Photos this week ({weekStart} – {weekEnd})
+          {photos.length > 0 && ` · ${photos.length}`}
         </p>
         {photos.length === 0 ? (
-          <p className="text-sm text-brand-ink-400">No photos uploaded on this day.</p>
+          <p className="text-sm text-brand-ink-400">No photos uploaded this week.</p>
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {photos.map((p) => (

@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
-import { isoDate, weekDays } from '@/lib/week';
-import { addDays, format, subDays } from 'date-fns';
+import { isoDate, isoWeekStart, weekDays, weekEnd, weekStart } from '@/lib/week';
+import { addDays, subDays } from 'date-fns';
 import { EntriesFilters } from './EntriesFilters';
 import { EntriesTable } from './EntriesTable';
 
@@ -57,12 +57,12 @@ export default async function EntriesPage({
   });
 
   const employeeIds = Array.from(new Set(normalized.map((r) => r.employee_id)));
-  const photosByDay = new Map<string, PhotoRow[]>();
+  const photosByWeek = new Map<string, PhotoRow[]>();
   if (employeeIds.length) {
-    // Pad ±1 day to forgive timezone drift between UTC `uploaded_at` and the
-    // local `date` on time_entries.
-    const photoFrom = isoDate(subDays(new Date(`${from}T00:00:00`), 1));
-    const photoTo = isoDate(addDays(new Date(`${to}T00:00:00`), 2));
+    // Photos are matched to the company week (Mon–Sun). Widen the fetch to
+    // cover whole weeks plus ±1 day for UTC/local drift on `uploaded_at`.
+    const photoFrom = isoDate(subDays(weekStart(from), 1));
+    const photoTo = isoDate(addDays(weekEnd(to), 2));
     const { data: photos } = await supabase
       .from('entry_photos')
       .select('id, employee_id, kind, caption, uploaded_at')
@@ -71,18 +71,18 @@ export default async function EntriesPage({
       .lt('uploaded_at', `${photoTo}T00:00:00Z`)
       .order('uploaded_at', { ascending: true });
     for (const p of (photos ?? []) as PhotoRow[]) {
-      const day = format(new Date(p.uploaded_at), 'yyyy-MM-dd');
-      const key = `${p.employee_id}|${day}`;
-      const list = photosByDay.get(key) ?? [];
+      const wk = isoWeekStart(new Date(p.uploaded_at));
+      const key = `${p.employee_id}|${wk}`;
+      const list = photosByWeek.get(key) ?? [];
       list.push(p);
-      photosByDay.set(key, list);
+      photosByWeek.set(key, list);
     }
   }
 
   const rowsWithPhotos = normalized.map((r) => ({
     ...r,
     photos:
-      photosByDay.get(`${r.employee_id}|${r.date}`)?.map((p) => ({
+      photosByWeek.get(`${r.employee_id}|${isoWeekStart(r.date)}`)?.map((p) => ({
         id: p.id,
         kind: p.kind,
         caption: p.caption,
