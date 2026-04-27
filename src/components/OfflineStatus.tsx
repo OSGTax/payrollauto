@@ -19,7 +19,7 @@ export function OfflineStatus() {
     const onOffline = () => setOnline(false);
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
-    const unsubscribe = subscribe(setPending);
+    const unsubscribe = subscribe((items) => setPending(items.length));
     return () => {
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline', onOffline);

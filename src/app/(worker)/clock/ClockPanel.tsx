@@ -1,14 +1,19 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin, Briefcase, Coffee, Shuffle, X } from 'lucide-react';
+import { MapPin, Briefcase, Coffee, Shuffle, X, CloudOff } from 'lucide-react';
 import { JobPicker } from '@/components/JobPicker';
 import { useToast } from '@/components/Toast';
 import { formatTime12h } from '@/lib/time';
-import { parseEasternWallClock } from '@/lib/tz';
+import { easternDateTime, parseEasternWallClock } from '@/lib/tz';
 import { patchEntryLocation } from './actions';
-import { runOrQueue } from '@/lib/offline-queue';
+import {
+  runOrQueue,
+  subscribe as subscribeQueue,
+  syntheticEntryId,
+  type QueuedAction,
+} from '@/lib/offline-queue';
 import type { Job, TimeEntry } from '@/lib/types';
 import type { OpenEntryDetail } from './page';
 import { format } from 'date-fns';
@@ -63,6 +68,93 @@ function startMsFromEntry(entry: TimeEntry): number {
   return parseEasternWallClock(entry.date, t);
 }
 
+/**
+ * Build a placeholder TimeEntry from a queued clockIn / switchWorkCode so the
+ * UI can show "On the clock" the instant the worker taps, even with no signal.
+ * Most fields default to nulls — the actual server insert will fill them in.
+ */
+function synthesizeEntry(
+  item: QueuedAction & { kind: 'clockIn' | 'switchWorkCode' },
+  employeeId: string,
+): TimeEntry {
+  const tap = item.payload.client_at_iso
+    ? new Date(item.payload.client_at_iso)
+    : new Date(item.queuedAt);
+  const { date, time } = easternDateTime(tap);
+  return {
+    id: syntheticEntryId(item.queuedAt),
+    employee_id: employeeId,
+    date,
+    start_time: time,
+    end_time: null,
+    hours: 0,
+    type: 1,
+    otmult: null,
+    job: item.payload.job,
+    phase: item.payload.phase,
+    cat: item.payload.cat,
+    class: null,
+    department: null,
+    worktype: null,
+    wcomp1: null,
+    wcomp2: null,
+    rate: null,
+    notes: null,
+    voice_text: null,
+    clock_in_lat: item.payload.lat,
+    clock_in_lng: item.payload.lng,
+    clock_out_lat: null,
+    clock_out_lng: null,
+    status: 'draft',
+    approved_by: null,
+    approved_at: null,
+    locked_at: null,
+    exported_at: null,
+    created_by: employeeId,
+    created_at: tap.toISOString(),
+    edited_by: null,
+    edited_at: null,
+  };
+}
+
+/**
+ * Replay queued actions on top of the server's open-entry snapshot to derive
+ * what the worker should currently see. Returns whether the resulting entry
+ * is optimistic (queued and not yet synced).
+ */
+function deriveEffectiveEntry(
+  serverEntry: TimeEntry | null,
+  queue: QueuedAction[],
+  employeeId: string,
+): { entry: TimeEntry | null; optimistic: boolean } {
+  let entry: TimeEntry | null = serverEntry;
+  let optimistic = false;
+  for (const item of queue) {
+    switch (item.kind) {
+      case 'clockIn':
+        if (!entry) {
+          entry = synthesizeEntry(item, employeeId);
+          optimistic = true;
+        }
+        break;
+      case 'clockOut':
+      case 'takeBreak':
+        if (entry) {
+          entry = null;
+          optimistic = false;
+        }
+        break;
+      case 'switchWorkCode':
+        if (entry) {
+          entry = synthesizeEntry(item, employeeId);
+          optimistic = true;
+        }
+        break;
+    }
+  }
+  return { entry, optimistic };
+}
+
 export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCodes }: Props) {
   const router = useRouter();
   const toast = useToast();
@@ -78,7 +170,14 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
   const [switchCat, setSwitchCat] = useState<string | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
-  const isClockedIn = !!openEntry;
+  const [queueItems, setQueueItems] = useState<QueuedAction[]>([]);
+  useEffect(() => subscribeQueue(setQueueItems), []);
+
+  const { entry: effectiveEntry, optimistic: entryIsOptimistic } = useMemo(
+    () => deriveEffectiveEntry(openEntry, queueItems, employee.id),
+    [openEntry, queueItems, employee.id],
+  );
+  const isClockedIn = !!effectiveEntry;
 
   // Warm up GPS early so the chip resolves before the worker hits the button.
   useEffect(() => {
@@ -108,12 +207,12 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
   // Live elapsed counter while clocked in.
   const [elapsed, setElapsed] = useState('00:00:00');
   useEffect(() => {
-    if (!isClockedIn || !openEntry) return;
-    const startMs = startMsFromEntry(openEntry);
+    if (!isClockedIn || !effectiveEntry) return;
+    const startMs = startMsFromEntry(effectiveEntry);
     const id = setInterval(() => setElapsed(formatElapsed(startMs)), 1000);
     setElapsed(formatElapsed(startMs));
     return () => clearInterval(id);
-  }, [isClockedIn, openEntry]);
+  }, [isClockedIn, effectiveEntry]);
 
   function handleClockIn() {
     if (!pickedJob || !pickedPhase || !pickedCat) {
@@ -164,8 +263,8 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
   }
 
   function handleClockOut() {
-    if (!openEntry) return;
-    const entryId = openEntry.id;
+    if (!effectiveEntry) return;
+    const entryId = effectiveEntry.id;
     buzz(40);
     setPulseKey((k) => k + 1);
     const cached = cachedCoords();
@@ -205,8 +304,8 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
   }
 
   function handleTakeBreak() {
-    if (!openEntry) return;
-    const entryId = openEntry.id;
+    if (!effectiveEntry) return;
+    const entryId = effectiveEntry.id;
     buzz(30);
     const cached = cachedCoords();
     const fresh = cached ? null : geolocate();
@@ -242,28 +341,28 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
   }
 
   function openSwitcher() {
-    if (!openEntry) return;
-    setSwitchJob(openEntry.job ?? null);
-    setSwitchPhase(openEntry.phase ?? null);
-    setSwitchCat(openEntry.cat ?? null);
+    if (!effectiveEntry) return;
+    setSwitchJob(effectiveEntry.job ?? null);
+    setSwitchPhase(effectiveEntry.phase ?? null);
+    setSwitchCat(effectiveEntry.cat ?? null);
     setSwitcherOpen(true);
   }
 
   function handleSwitchWorkCode() {
-    if (!openEntry) return;
+    if (!effectiveEntry) return;
     if (!switchJob || !switchPhase || !switchCat) {
       toast.error('Pick a job, phase, and category first.');
       return;
     }
     const sameAsCurrent =
-      switchJob === openEntry.job &&
-      switchPhase === openEntry.phase &&
-      switchCat === openEntry.cat;
+      switchJob === effectiveEntry.job &&
+      switchPhase === effectiveEntry.phase &&
+      switchCat === effectiveEntry.cat;
     if (sameAsCurrent) {
       setSwitcherOpen(false);
       return;
     }
-    const oldEntryId = openEntry.id;
+    const oldEntryId = effectiveEntry.id;
     buzz(30);
     const cached = cachedCoords();
     // Switch closes the old entry and opens a new one. We can patch the old
@@ -307,11 +406,26 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
     });
   }
 
-  if (isClockedIn && openEntry) {
-    const startedAtLabel = formatTime12h(openEntry.start_time, '--:-- --');
+  if (isClockedIn && effectiveEntry) {
+    const startedAtLabel = formatTime12h(effectiveEntry.start_time, '--:-- --');
+    // The server-side phase/category descriptions only apply when the entry
+    // matches what's on the server. Once a queued action has changed the open
+    // entry, fall back to showing codes only.
+    const detail =
+      entryIsOptimistic ||
+      !openEntry ||
+      openEntry.id !== effectiveEntry.id
+        ? null
+        : openEntryDetail ?? null;
     return (
       <div className="flex flex-col items-center gap-5 pt-6 text-center">
         <p className="text-xs uppercase tracking-widest text-brand-ink-500">On the clock</p>
+        {entryIsOptimistic && (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-yellow-300 bg-brand-yellow-50 px-3 py-1 text-xs font-medium text-brand-ink-800">
+            <CloudOff size={14} />
+            Pending sync — saved on this phone
+          </span>
+        )}
         <p
           className="font-mono text-6xl font-bold tabular-nums text-brand-ink-900"
           aria-live="polite"
@@ -322,7 +436,7 @@ export function ClockPanel({ employee, openEntry, openEntryDetail, jobs, lastCod
           Started at <span className="font-medium text-brand-ink-700">{startedAtLabel}</span>
         </p>
 
-        <JobCostCard entry={openEntry} detail={openEntryDetail ?? null} />
+        <JobCostCard entry={effectiveEntry} detail={detail} />
 
         {switcherOpen && (
           <div className="w-full rounded-xl border border-brand-yellow-400 bg-white p-3 text-left shadow-sm">

@@ -24,8 +24,8 @@ export function ServiceWorkerRegister() {
   useEffect(() => {
     let cancelled = false;
     let pending = 0;
-    const unsubscribe = subscribe((count) => {
-      pending = count;
+    const unsubscribe = subscribe((items) => {
+      pending = items.length;
     });
 
     async function attempt() {

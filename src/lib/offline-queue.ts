@@ -105,19 +105,21 @@ export async function listPending(): Promise<QueuedAction[]> {
 
 // --- Subscriptions ------------------------------------------------------
 
-type Listener = (count: number) => void;
+type Listener = (items: QueuedAction[]) => void;
 const listeners = new Set<Listener>();
 
 async function notify() {
   const items = await listPending();
-  for (const fn of listeners) fn(items.length);
+  for (const fn of listeners) fn(items);
 }
 
 export function subscribe(fn: Listener): () => void {
   listeners.add(fn);
-  // Push current count immediately.
-  listPending().then((items) => fn(items.length));
-  return () => listeners.delete(fn);
+  // Push current state immediately.
+  listPending().then(fn);
+  return () => {
+    listeners.delete(fn);
+  };
 }
 
 // --- Dispatch -----------------------------------------------------------
@@ -176,10 +178,45 @@ export async function runOrQueue(
 let draining = false;
 
 /**
+ * Synthetic IDs assigned to optimistic entries before the server has minted
+ * a real one. Format: `optimistic-<queuedAt-ms>`. Clients use these as the
+ * `entryId` field when queueing follow-up actions while still offline.
+ */
+export function syntheticEntryId(queuedAt: number): string {
+  return `optimistic-${queuedAt}`;
+}
+
+export function isSyntheticId(id: string | null | undefined): boolean {
+  return typeof id === 'string' && id.startsWith('optimistic-');
+}
+
+function payloadEntryId(item: QueuedAction): string | undefined {
+  if ('entryId' in item.payload) return item.payload.entryId;
+  return undefined;
+}
+
+function rewriteEntryId(item: QueuedAction, realId: string): QueuedAction {
+  switch (item.kind) {
+    case 'clockIn':
+      return item;
+    case 'clockOut':
+      return { ...item, payload: { ...item.payload, entryId: realId } };
+    case 'takeBreak':
+      return { ...item, payload: { ...item.payload, entryId: realId } };
+    case 'switchWorkCode':
+      return { ...item, payload: { ...item.payload, entryId: realId } };
+  }
+}
+
+/**
  * Replay the queue in FIFO order. Stops at the first action that fails with
  * what looks like a network error so that ordering is preserved on the next
  * attempt. Logical errors (e.g. the entry was deleted server-side) drop the
  * action so the queue can't get stuck on a permanently-bad record.
+ *
+ * When a queued `clockIn` syncs and returns a real entry id, any later
+ * queued actions that reference its synthetic id are rewritten in place so
+ * the server sees the right entry to close or switch.
  */
 export async function drain(): Promise<{ synced: number; remaining: number }> {
   if (draining) return { synced: 0, remaining: (await listPending()).length };
@@ -187,19 +224,31 @@ export async function drain(): Promise<{ synced: number; remaining: number }> {
   let synced = 0;
   try {
     const queue = await listPending();
-    for (const item of queue) {
+    const idMap = new Map<string, string>();
+    for (let i = 0; i < queue.length; i++) {
+      let item = queue[i];
+      // Rewrite a stale synthetic entryId if we minted a real one earlier
+      // in this drain.
+      const entryId = payloadEntryId(item);
+      if (entryId && isSyntheticId(entryId)) {
+        const real = idMap.get(entryId);
+        if (real) {
+          item = rewriteEntryId(item, real);
+          await update(item);
+        }
+      }
       try {
         const out = await dispatch(item);
-        // Server may still return a logical error in the result envelope.
-        const result = out.result as { error?: string };
+        const result = out.result as { error?: string; entryId?: string };
         if (result?.error) {
           item.attempts += 1;
           item.lastError = result.error;
           await update(item);
-          // Treat as poison if it failed twice in a row with the same logical
-          // error; otherwise leave it for a manual retry pass.
           if (item.attempts >= 3) await remove(item.id);
           break;
+        }
+        if (item.kind === 'clockIn' && result?.entryId) {
+          idMap.set(syntheticEntryId(item.queuedAt), result.entryId);
         }
         await remove(item.id);
         synced += 1;
@@ -210,7 +259,6 @@ export async function drain(): Promise<{ synced: number; remaining: number }> {
           await update(item);
           break;
         }
-        // Unexpected error — drop the action so the queue isn't stuck.
         await remove(item.id);
       }
     }
